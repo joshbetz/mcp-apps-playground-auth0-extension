@@ -9,7 +9,7 @@ import { RESOURCE_URI } from './urls.ts';
 import { requireEnv } from '../../env.ts';
 import { getCallerUser, withRequiredAuth } from '../../server/index.ts';
 
-const FORM_ID = 'ap_bjZ5qS6RUiyBZXvrL4Fkku';
+const FORM_ID = 'ap_6yKY4GhTrRudVqb4auevMv';
 const CONTEXT_JWT_TTL = '5m';
 
 export function registerUpdateProfile(server: McpServer): void {

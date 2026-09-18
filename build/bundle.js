@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.3",
+      version: "1.0.4",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -250745,7 +250745,7 @@ function registerUpdatePaymentDetails(server) {
 // src/toolkits/auth0-forms/update-profile.ts
 var import_node_crypto4 = require("node:crypto");
 var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
-var FORM_ID2 = "ap_bjZ5qS6RUiyBZXvrL4Fkku";
+var FORM_ID2 = "ap_6yKY4GhTrRudVqb4auevMv";
 var CONTEXT_JWT_TTL2 = "5m";
 function registerUpdateProfile(server) {
   j(
@@ -251092,7 +251092,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.3",
+  version: "1.0.4",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
