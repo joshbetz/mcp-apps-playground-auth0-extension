@@ -210235,9 +210235,9 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.0",
+      version: "1.0.1",
       author: "atko-scratch",
-      repository: "https://github.com/atko-scratch/mcp-apps-playground-auth0-extension",
+      repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
       logoUrl: "https://upload.wikimedia.org/wikipedia/commons/f/fe/Model_Context_Protocol_logo.svg",
       useHashName: false,
@@ -250913,9 +250913,9 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.0",
+  version: "1.0.1",
   author: "atko-scratch",
-  repository: "https://github.com/atko-scratch/mcp-apps-playground-auth0-extension",
+  repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
   logoUrl: "https://upload.wikimedia.org/wikipedia/commons/f/fe/Model_Context_Protocol_logo.svg",
   useHashName: false,
