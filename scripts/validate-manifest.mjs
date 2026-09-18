@@ -1,0 +1,52 @@
+import { readFile } from "node:fs/promises";
+
+const manifest = JSON.parse(await readFile(new URL("../webtask.json", import.meta.url), "utf8"));
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+const packagedManifest = packageJson["auth0-extension"];
+const requiredFields = [
+  "title",
+  "name",
+  "version",
+  "author",
+  "repository",
+  "keywords",
+  "useHashName",
+  "description",
+  "type",
+  "runtime",
+  "category",
+  "initialUrlPath",
+  "auth0",
+];
+
+for (const field of requiredFields) {
+  if (!(field in manifest)) throw new Error(`webtask.json is missing required field: ${field}`);
+}
+
+if ("secrets" in manifest && Object.keys(manifest.secrets).length === 0) {
+  throw new Error("webtask.json.secrets must be omitted entirely, not an empty object.");
+}
+if (manifest.runtime !== "node22") throw new Error('webtask.json.runtime must be "node22".');
+if (manifest.type !== "application") throw new Error('webtask.json.type must be "application".');
+if (manifest.category !== "end_user") throw new Error('webtask.json.category must be "end_user".');
+if (manifest.initialUrlPath !== "/") throw new Error('webtask.json.initialUrlPath must be "/".');
+if (manifest.auth0?.createClient !== true) throw new Error("This template requires auth0.createClient: true.");
+if (
+  manifest.auth0?.scopes !==
+  "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+) {
+  throw new Error("This template requires the minimal Management API scopes for setup.");
+}
+
+if (!manifest.secrets?.SESSION_SECRET?.required) {
+  throw new Error("The existing Auth0 Forms tools require a SESSION_SECRET extension setting.");
+}
+
+if (!packagedManifest) throw new Error("package.json is missing its auth0-extension manifest.");
+for (const field of ["title", "logoUrl", "useHashName", "type", "category", "initialUrlPath", "auth0", "secrets"]) {
+  if (JSON.stringify(manifest[field]) !== JSON.stringify(packagedManifest[field])) {
+    throw new Error(`webtask.json and package.json auth0-extension.${field} must match.`);
+  }
+}
+
+console.log("Validated Auth0 Custom Extension manifest.");

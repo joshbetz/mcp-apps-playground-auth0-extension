@@ -1,0 +1,807 @@
+import type { Request, RequestHandler, Response } from "express";
+import express from "express";
+import { ApiClient, ProtectedResourceMetadataBuilder } from "@auth0/auth0-api-js";
+
+export type ConfigReader = (key: string) => string | undefined;
+
+const protectedResourceMetadataPath = "/.well-known/oauth-protected-resource";
+const setupAdminPath = "/.extensions/setup";
+const setupAudience = "urn:mcp-apps-playground-setup";
+const setupSessionStorageKey = "mcp-apps-playground:setup-token";
+
+interface WebtaskRequest extends Request {
+  x_wt?: {
+    ectx?: {
+      PUBLIC_WT_URL?: unknown;
+    };
+  };
+}
+
+interface LegacyExtensionTools {
+  middlewares: {
+    authenticateAdmins: (options: Record<string, unknown>) => RequestHandler;
+  };
+  routes: {
+    dashboardAdmins: (options: Record<string, unknown>) => RequestHandler;
+  };
+}
+
+interface ResourceServer {
+  id: string;
+  identifier: string;
+}
+
+interface Connection {
+  id: string;
+  name: string;
+  strategy: string;
+  isDomainConnection: boolean;
+}
+
+interface SetupAdminAuth {
+  authenticate: RequestHandler;
+  routes: RequestHandler;
+}
+
+class ManagementApiError extends Error {
+  readonly status: number;
+
+  constructor(
+    message: string,
+    status: number,
+  ) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function readConfig(config: ConfigReader, key: string): string | undefined {
+  const value = config(key)?.trim();
+  return value || undefined;
+}
+
+function toAuth0Domain(value: string): string {
+  try {
+    return new URL(value).host;
+  } catch {
+    return value.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+}
+
+function tenantOrigin(config: ConfigReader): string {
+  const domain = readConfig(config, "AUTH0_DOMAIN");
+  if (!domain) {
+    throw new Error("Auth0 runtime settings are unavailable. Update or reinstall the extension with its managed client enabled.");
+  }
+
+  return `https://${toAuth0Domain(domain)}`;
+}
+
+function requestHeader(req: Request, name: string): string | undefined {
+  if (typeof req.header === "function") {
+    const expressValue = req.header(name);
+    if (typeof expressValue === "string") return expressValue;
+  }
+
+  const value = req.headers?.[name.toLowerCase()];
+  return typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
+}
+
+function installedExtensionBaseUrl(config: ConfigReader, req: Request): string {
+  const webtaskUrl = (req as WebtaskRequest).x_wt?.ectx?.PUBLIC_WT_URL;
+  if (typeof webtaskUrl === "string" && webtaskUrl) return webtaskUrl.replace(/\/$/, "");
+
+  const configuredWebtaskUrl = readConfig(config, "PUBLIC_WT_URL");
+  if (configuredWebtaskUrl) return configuredWebtaskUrl.replace(/\/$/, "");
+
+  const protocol = requestHeader(req, "x-forwarded-proto") ?? req.protocol ?? "https";
+  const host = requestHeader(req, "x-forwarded-host") ?? requestHeader(req, "host");
+  if (!host) throw new Error("Unable to determine the installed Webtask URL.");
+
+  const pathname = (req.originalUrl ?? req.url ?? "/").split("?", 1)[0];
+  const routeSuffix = [
+    "/.well-known/oauth-protected-resource/mcp",
+    "/mcp",
+    "/health",
+    "/setup/provision",
+  ].find((suffix) => pathname.endsWith(suffix));
+  const basePath = routeSuffix ? pathname.slice(0, -routeSuffix.length) : pathname === "/" ? "" : pathname;
+  return `${protocol}://${host}${basePath}`;
+}
+
+function publicMcpBaseUrl(config: ConfigReader, req: Request): string {
+  const override = readConfig(config, "PUBLIC_BASE_URL");
+  return override ? override.replace(/\/$/, "") : installedExtensionBaseUrl(config, req);
+}
+
+function mcpUrl(config: ConfigReader, req: Request): string {
+  return `${publicMcpBaseUrl(config, req)}/mcp`;
+}
+
+function protectedResourceMetadataUrl(config: ConfigReader, req: Request): string {
+  const endpoint = new URL(mcpUrl(config, req));
+  return `${endpoint.origin}${protectedResourceMetadataPath}${endpoint.pathname}`;
+}
+
+function setupAdminAuth(config: ConfigReader, req: Request): SetupAdminAuth | undefined {
+  const extensionSecret = readConfig(config, "EXTENSION_SECRET");
+  const domain = readConfig(config, "AUTH0_DOMAIN");
+  if (!extensionSecret || !domain) return undefined;
+
+  const extensionTools = require("auth0-extension-express-tools") as LegacyExtensionTools;
+  const baseUrl = installedExtensionBaseUrl(config, req);
+  const options = {
+    audience: setupAudience,
+    baseUrl,
+    clientName: "MCP Gateway Playground",
+    domain: toAuth0Domain(domain),
+    noAccessToken: true,
+    rta: toAuth0Domain(readConfig(config, "AUTH0_RTA") ?? domain),
+    scopes: "read:resource_servers create:resource_servers",
+    secret: extensionSecret,
+    sessionStorageKey: setupSessionStorageKey,
+    urlPrefix: setupAdminPath,
+  };
+
+  return {
+    authenticate: extensionTools.middlewares.authenticateAdmins({
+      audience: options.audience,
+      baseUrl: options.baseUrl,
+      secret: options.secret,
+    }),
+    routes: extensionTools.routes.dashboardAdmins(options),
+  };
+}
+
+function managementCredentials(config: ConfigReader) {
+  const domain = readConfig(config, "AUTH0_DOMAIN");
+  const clientId = readConfig(config, "AUTH0_CLIENT_ID");
+  const clientSecret = readConfig(config, "AUTH0_CLIENT_SECRET");
+  if (!domain || !clientId || !clientSecret) {
+    throw new Error("The extension management client is unavailable. Update or reinstall the extension before provisioning its API.");
+  }
+
+  return { clientId, clientSecret, domain: toAuth0Domain(domain) };
+}
+
+async function managementAccessToken(config: ConfigReader): Promise<{ domain: string; token: string }> {
+  const credentials = managementCredentials(config);
+  const response = await fetch(`https://${credentials.domain}/oauth/token`, {
+    body: JSON.stringify({
+      audience: `https://${credentials.domain}/api/v2/`,
+      client_id: credentials.clientId,
+      client_secret: credentials.clientSecret,
+      grant_type: "client_credentials",
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  if (!response.ok) throw new Error(`Unable to obtain a Management API token (${response.status}).`);
+
+  const payload = (await response.json()) as { access_token?: unknown };
+  if (typeof payload.access_token !== "string" || !payload.access_token) {
+    throw new Error("The Management API token response did not contain an access token.");
+  }
+
+  return { domain: credentials.domain, token: payload.access_token };
+}
+
+async function managementApiJson<T>(
+  domain: string,
+  token: string,
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetch(`https://${domain}/api/v2/${path}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(options.body ? { "content-type": "application/json" } : {}),
+      ...options.headers,
+    },
+  });
+  if (!response.ok) throw new ManagementApiError(`Management API request failed (${response.status}).`, response.status);
+  return (await response.json()) as T;
+}
+
+async function listResourceServers(domain: string, token: string): Promise<ResourceServer[]> {
+  const resourceServers: ResourceServer[] = [];
+  const perPage = 100;
+
+  for (let page = 0; page < 20; page += 1) {
+    const result = await managementApiJson<unknown>(domain, token, `resource-servers?page=${page}&per_page=${perPage}`);
+    const currentPage = Array.isArray(result)
+      ? result
+      : Array.isArray((result as { resource_servers?: unknown[] }).resource_servers)
+        ? (result as { resource_servers: unknown[] }).resource_servers
+        : [];
+    const validResources = currentPage.filter(
+      (resource): resource is ResourceServer =>
+        typeof resource === "object" &&
+        resource !== null &&
+        typeof (resource as ResourceServer).id === "string" &&
+        typeof (resource as ResourceServer).identifier === "string",
+    );
+    resourceServers.push(...validResources);
+    if (currentPage.length < perPage) break;
+  }
+
+  return resourceServers;
+}
+
+async function ensureResourceServer(config: ConfigReader, audience: string) {
+  const { domain, token } = await managementAccessToken(config);
+  const existing = (await listResourceServers(domain, token)).find((resource) => resource.identifier === audience);
+  if (existing) return { audience, resourceServerId: existing.id, status: "reused" as const };
+
+  try {
+    const created = await managementApiJson<ResourceServer>(domain, token, "resource-servers", {
+      body: JSON.stringify({
+        identifier: audience,
+        name: "MCP Gateway Playground",
+        scopes: [
+          { value: "read:destinations", description: "Read travel destination recommendations." },
+          { value: "read:bookings", description: "Read travel bookings and invoices." },
+          { value: "bookings:write", description: "Confirm travel bookings." },
+          { value: "read:account", description: "Open account update forms." }
+        ],
+        signing_alg: "RS256",
+      }),
+      method: "POST",
+    });
+    return { audience, resourceServerId: created.id, status: "created" as const };
+  } catch (error) {
+    if (!(error instanceof ManagementApiError) || error.status !== 409) throw error;
+    const concurrentResource = (await listResourceServers(domain, token)).find(
+      (resource) => resource.identifier === audience,
+    );
+    if (!concurrentResource) throw error;
+    return { audience, resourceServerId: concurrentResource.id, status: "reused" as const };
+  }
+}
+
+interface ClientGrant {
+  id: string;
+  audience: string;
+  default_for?: string;
+}
+
+async function findThirdPartyClientGrant(
+  domain: string,
+  token: string,
+  audience: string,
+): Promise<ClientGrant | undefined> {
+  const grants = await managementApiJson<unknown>(domain, token, `client-grants?audience=${encodeURIComponent(audience)}`);
+  const currentPage = Array.isArray(grants) ? grants : [];
+  return currentPage.find(
+    (grant): grant is ClientGrant =>
+      typeof grant === "object" &&
+      grant !== null &&
+      typeof (grant as ClientGrant).id === "string" &&
+      (grant as ClientGrant).default_for === "third_party_clients",
+  );
+}
+
+async function ensureThirdPartyClientGrant(config: ConfigReader, audience: string) {
+  const { domain, token } = await managementAccessToken(config);
+  const existing = await findThirdPartyClientGrant(domain, token, audience);
+  if (existing) return { status: "reused" as const };
+
+  try {
+    await managementApiJson<ClientGrant>(domain, token, "client-grants", {
+      body: JSON.stringify({
+        audience,
+        default_for: "third_party_clients",
+        allow_all_scopes: true,
+        subject_type: "user",
+      }),
+      method: "POST",
+    });
+    return { status: "created" as const };
+  } catch (error) {
+    if (!(error instanceof ManagementApiError) || error.status !== 409) throw error;
+    const concurrentGrant = await findThirdPartyClientGrant(domain, token, audience);
+    if (!concurrentGrant) throw error;
+    return { status: "reused" as const };
+  }
+}
+
+async function ensureResourceParameterProfile(domain: string, token: string): Promise<void> {
+  const settings = await managementApiJson<{ resource_parameter_profile?: string }>(domain, token, "tenants/settings");
+  if (settings.resource_parameter_profile === "compatibility") return;
+  await managementApiJson(domain, token, "tenants/settings", {
+    body: JSON.stringify({ resource_parameter_profile: "compatibility" }),
+    method: "PATCH",
+  });
+}
+
+async function listConnections(domain: string, token: string): Promise<Connection[]> {
+  const connections: Connection[] = [];
+  const perPage = 100;
+
+  for (let page = 0; page < 20; page += 1) {
+    const result = await managementApiJson<unknown>(domain, token, `connections?page=${page}&per_page=${perPage}`);
+    const currentPage = Array.isArray(result) ? result : [];
+    const validConnections = currentPage.filter(
+      (connection): connection is { id: string; name: string; strategy: string; is_domain_connection?: boolean } =>
+        typeof connection === "object" &&
+        connection !== null &&
+        typeof (connection as { id?: unknown }).id === "string" &&
+        typeof (connection as { name?: unknown }).name === "string" &&
+        typeof (connection as { strategy?: unknown }).strategy === "string",
+    );
+    connections.push(
+      ...validConnections.map((connection) => ({
+        id: connection.id,
+        name: connection.name,
+        strategy: connection.strategy,
+        isDomainConnection: connection.is_domain_connection === true,
+      })),
+    );
+    if (currentPage.length < perPage) break;
+  }
+
+  return connections;
+}
+
+async function promoteConnection(config: ConfigReader, connectionId: string): Promise<Connection> {
+  const { domain, token } = await managementAccessToken(config);
+  const updated = await managementApiJson<{ id: string; name: string; strategy: string; is_domain_connection?: boolean }>(
+    domain,
+    token,
+    `connections/${encodeURIComponent(connectionId)}`,
+    { body: JSON.stringify({ is_domain_connection: true }), method: "PATCH" },
+  );
+  return {
+    id: updated.id,
+    name: updated.name,
+    strategy: updated.strategy,
+    isDomainConnection: updated.is_domain_connection === true,
+  };
+}
+
+async function readThirdPartyClientFlags(
+  domain: string,
+  token: string,
+): Promise<{ dcrEnabled: boolean; cimdEnabled: boolean }> {
+  const settings = await managementApiJson<{
+    flags?: { enable_dynamic_client_registration?: boolean };
+    client_id_metadata_document_supported?: boolean;
+  }>(domain, token, "tenants/settings");
+  return {
+    dcrEnabled: settings.flags?.enable_dynamic_client_registration === true,
+    cimdEnabled: settings.client_id_metadata_document_supported === true,
+  };
+}
+
+async function enableDynamicClientRegistration(config: ConfigReader): Promise<void> {
+  const { domain, token } = await managementAccessToken(config);
+  await managementApiJson(domain, token, "tenants/settings", {
+    body: JSON.stringify({ flags: { enable_dynamic_client_registration: true } }),
+    method: "PATCH",
+  });
+}
+
+async function enableClientIdMetadataDocument(config: ConfigReader): Promise<void> {
+  const { domain, token } = await managementAccessToken(config);
+  await managementApiJson(domain, token, "tenants/settings", {
+    body: JSON.stringify({ client_id_metadata_document_supported: true }),
+    method: "PATCH",
+  });
+}
+
+async function setupStatus(config: ConfigReader) {
+  const { domain, token } = await managementAccessToken(config);
+  const [connections, flags] = await Promise.all([
+    listConnections(domain, token),
+    readThirdPartyClientFlags(domain, token),
+  ]);
+  return {
+    connections,
+    dcrEnabled: flags.dcrEnabled,
+    cimdEnabled: flags.cimdEnabled,
+    hasDomainConnection: connections.some((connection) => connection.isDomainConnection),
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
+}
+
+function escapeInlineJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+}
+
+function extensionRoutes(path: string): string[] {
+  return [path, `/:extensionName${path}`];
+}
+
+const pageStyles = `
+  :root { color-scheme: light; }
+  body { margin: 0; padding: 2.5rem 1.5rem; background: #f6f5f4; color: #1a1523; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+  h2 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+  p { margin: 0 0 0.75rem; }
+  .lede { color: #635e6f; }
+  code, .code-block { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85em; }
+  code { background: #ece9e6; padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all; }
+  .card { background: #fff; border: 1px solid #e4e1e8; border-radius: 10px; padding: 1.5rem; margin-top: 1.5rem; }
+  .card.success { border-color: #b6e3c6; background: #f2fbf5; }
+  .button { display: inline-block; background: #1a1523; color: #fff; text-decoration: none; padding: 0.55em 1.1em; border-radius: 6px; font-weight: 600; border: none; font-size: 0.9em; cursor: pointer; font-family: inherit; }
+  .button:hover { background: #362f45; }
+  .button:disabled { background: #a49fae; cursor: default; }
+  .status { color: #635e6f; font-size: 0.9em; }
+  .status.error { color: #b3261e; }
+  .code-block { display: block; background: #1a1523; color: #f6f5f4; padding: 0.9rem 1rem; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .steps { padding-left: 1.25rem; }
+  .steps li { margin-bottom: 0.5rem; }
+  #connection-list { list-style: none; padding-left: 0; }
+  #connection-list li { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: #f6f5f4; border-radius: 6px; margin-bottom: 0.5rem; }
+  a { color: #4c1d95; }
+`;
+
+function renderSetupSection(options: { endpoint: string; setupBaseUrl: string }): string {
+  const loginHref = `${options.setupBaseUrl}${setupAdminPath}/login`;
+  const config = escapeInlineJson({
+    provisionEndpoint: `${options.setupBaseUrl}/setup/provision`,
+    statusEndpoint: `${options.setupBaseUrl}/setup/status`,
+    promoteEndpointBase: `${options.setupBaseUrl}/setup/connections`,
+    dcrEnableEndpoint: `${options.setupBaseUrl}/setup/dcr/enable`,
+    cimdEnableEndpoint: `${options.setupBaseUrl}/setup/cimd/enable`,
+    storageKey: setupSessionStorageKey,
+  });
+  return `
+    <section class="card" id="setup-card">
+      <h2>1. Provision the Auth0 API</h2>
+      <p class="lede">Sign in as a tenant administrator to create or reuse the Auth0 API resource server for this MCP endpoint.</p>
+      <p><a id="setup-login" class="button" href="${escapeHtml(loginHref)}">Sign in and provision</a></p>
+      <p id="setup-status" class="status"></p>
+    </section>
+    <section class="card" id="next-steps-card" hidden>
+      <h2>2. Install the OAuth discovery extension</h2>
+      <p class="lede">MCP clients discover this endpoint's authorization server through a separate <code>.well-known</code> Custom Extension. It must be installed once per tenant and needs no configuration &mdash; it derives everything it needs from the request itself.</p>
+      <ol class="steps">
+        <li>In this tenant's Dashboard, go to <strong>Extensions</strong> and install <a href="https://github.com/mustafadeel/auth0-ext-wellknown" target="_blank" rel="noopener">auth0-ext-wellknown</a> (keep its name <code>.well-known</code>).</li>
+      </ol>
+    </section>
+    <section class="card" id="connection-card" hidden>
+      <h2>3. Promote a domain-level connection</h2>
+      <p class="lede">Third-party and dynamically registered MCP clients can only sign users in through a <strong>domain-level</strong> connection. Without one, those clients have no way to show a login screen.</p>
+      <p id="connection-status" class="status"></p>
+      <ul class="steps" id="connection-list"></ul>
+    </section>
+    <section class="card" id="client-card" hidden>
+      <h2>4. Connect an MCP client</h2>
+      <p id="dcr-status" class="status"></p>
+      <div id="dcr-enabled-note" hidden>
+        <p class="lede">Dynamic Client Registration is enabled for this tenant, so most MCP clients can register themselves automatically. This also means anyone who discovers this endpoint can register a client against your tenant. If that is not intended, disable it under Dashboard &rarr; Settings &rarr; Advanced.</p>
+      </div>
+      <div id="dcr-disabled-note" hidden>
+        <p class="lede">Dynamic Client Registration is disabled. Enable it so most MCP clients can register themselves automatically:</p>
+        <p><button id="dcr-enable" class="button" type="button">Enable Dynamic Client Registration</button></p>
+        <p class="lede">Or register the MCP client manually in this tenant:</p>
+        <ol class="steps">
+          <li>Create an application (type <strong>Native</strong> or <strong>Single Page Application</strong> depending on the client) with the <code>authorization_code</code> and <code>refresh_token</code> grants.</li>
+          <li>Add the client's redirect URI to <strong>Allowed Callback URLs</strong>.</li>
+          <li>Grant the client access to this API (<code>Applications &rarr; APIs &rarr; this API &rarr; Machine to Machine Applications</code>, or the client's <strong>APIs</strong> tab) with audience:</li>
+        </ol>
+        <code id="client-audience"></code>
+      </div>
+      <p id="cimd-status" class="status"></p>
+      <div id="cimd-disabled-note" hidden>
+        <p class="lede">Client ID Metadata Document support is disabled. Enabling it lets MCP clients authenticate using a client ID that is itself a URL to their own metadata, without pre-registration.</p>
+        <p><button id="cimd-enable" class="button" type="button">Enable Client ID Metadata Document support</button></p>
+      </div>
+      <p class="lede">Once a domain-level connection exists and a client is registered, connect an OAuth-capable MCP client to the endpoint below.</p>
+      <code id="mcp-endpoint">${escapeHtml(options.endpoint)}</code>
+    </section>
+    <script>
+      const setup = ${config};
+      const statusEl = document.getElementById("setup-status");
+      const token = sessionStorage.getItem(setup.storageKey);
+
+      function renderConnections(connections) {
+        const list = document.getElementById("connection-list");
+        list.innerHTML = "";
+        const domainConnection = connections.find((c) => c.isDomainConnection);
+        const connectionStatus = document.getElementById("connection-status");
+        if (domainConnection) {
+          connectionStatus.textContent = "Domain-level connection: " + domainConnection.name + " (" + domainConnection.strategy + ")";
+          document.getElementById("connection-card").classList.add("success");
+          return;
+        }
+        connectionStatus.textContent = connections.length
+          ? "No domain-level connection yet. Promote one below:"
+          : "No connections found in this tenant yet. Create one first, then reload this page.";
+        connections.forEach((connection) => {
+          const item = document.createElement("li");
+          const label = document.createElement("span");
+          label.textContent = connection.name + " (" + connection.strategy + ") ";
+          const button = document.createElement("button");
+          button.textContent = "Promote";
+          button.className = "button";
+          button.addEventListener("click", () => {
+            button.disabled = true;
+            button.textContent = "Promoting…";
+            fetch(setup.promoteEndpointBase + "/" + encodeURIComponent(connection.id) + "/promote", {
+              method: "POST",
+              headers: { Authorization: "Bearer " + token },
+            })
+              .then(async (response) => ({ ok: response.ok, body: await response.json() }))
+              .then((result) => {
+                if (!result.ok) throw new Error(result.body.message || "Promotion failed.");
+                connectionStatus.textContent = "Domain-level connection: " + result.body.connection.name + " (" + result.body.connection.strategy + ")";
+                document.getElementById("connection-card").classList.add("success");
+                list.innerHTML = "";
+              })
+              .catch((error) => {
+                button.disabled = false;
+                button.textContent = "Promote";
+                connectionStatus.classList.add("error");
+                connectionStatus.textContent = "Promotion failed: " + error.message;
+              });
+          });
+          item.appendChild(label);
+          item.appendChild(button);
+          list.appendChild(item);
+        });
+      }
+
+      function enableTenantFlag(button, endpoint, statusEl, statusText, noteId) {
+        button.addEventListener("click", () => {
+          button.disabled = true;
+          button.textContent = "Enabling…";
+          fetch(endpoint, { method: "POST", headers: { Authorization: "Bearer " + token } })
+            .then(async (response) => ({ ok: response.ok, body: await response.json() }))
+            .then((result) => {
+              if (!result.ok) throw new Error(result.body.message || "Enabling failed.");
+              statusEl.textContent = statusText;
+              statusEl.classList.remove("error");
+              document.getElementById(noteId).hidden = true;
+            })
+            .catch((error) => {
+              button.disabled = false;
+              button.textContent = button.dataset.originalLabel;
+              statusEl.classList.add("error");
+              statusEl.textContent = "Enabling failed: " + error.message;
+            });
+        });
+      }
+
+      function renderDcrStatus(dcrEnabled, audience) {
+        const dcrStatus = document.getElementById("dcr-status");
+        document.getElementById("client-audience").textContent = audience;
+        if (dcrEnabled) {
+          dcrStatus.textContent = "Dynamic Client Registration: enabled";
+          document.getElementById("dcr-enabled-note").hidden = false;
+        } else {
+          dcrStatus.textContent = "Dynamic Client Registration: disabled";
+          document.getElementById("dcr-disabled-note").hidden = false;
+          const dcrButton = document.getElementById("dcr-enable");
+          dcrButton.dataset.originalLabel = dcrButton.textContent;
+          enableTenantFlag(dcrButton, setup.dcrEnableEndpoint, dcrStatus, "Dynamic Client Registration: enabled", "dcr-disabled-note");
+        }
+      }
+
+      function renderCimdStatus(cimdEnabled) {
+        const cimdStatus = document.getElementById("cimd-status");
+        if (cimdEnabled) {
+          cimdStatus.textContent = "Client ID Metadata Document support: enabled";
+        } else {
+          cimdStatus.textContent = "Client ID Metadata Document support: disabled";
+          document.getElementById("cimd-disabled-note").hidden = false;
+          const cimdButton = document.getElementById("cimd-enable");
+          cimdButton.dataset.originalLabel = cimdButton.textContent;
+          enableTenantFlag(cimdButton, setup.cimdEnableEndpoint, cimdStatus, "Client ID Metadata Document support: enabled", "cimd-disabled-note");
+        }
+      }
+
+      if (token) {
+        statusEl.textContent = "Provisioning the Auth0 API resource server…";
+        fetch(setup.provisionEndpoint, { method: "POST", headers: { Authorization: "Bearer " + token } })
+          .then(async (response) => ({ ok: response.ok, body: await response.json() }))
+          .then((result) => {
+            if (!result.ok) throw new Error(result.body.message || "Setup failed.");
+            document.getElementById("setup-card").classList.add("success");
+            statusEl.textContent = "Resource server " + result.body.status + ": " + result.body.audience;
+            document.getElementById("setup-login").remove();
+            const nextSteps = document.getElementById("next-steps-card");
+            nextSteps.hidden = false;
+
+            document.getElementById("connection-card").hidden = false;
+            document.getElementById("client-card").hidden = false;
+            return fetch(setup.statusEndpoint, { headers: { Authorization: "Bearer " + token } })
+              .then(async (response) => ({ ok: response.ok, body: await response.json() }))
+              .then((statusResult) => {
+                if (!statusResult.ok) throw new Error(statusResult.body.message || "Unable to read setup status.");
+                renderConnections(statusResult.body.connections);
+                renderDcrStatus(statusResult.body.dcrEnabled, result.body.audience);
+                renderCimdStatus(statusResult.body.cimdEnabled);
+              });
+          })
+          .catch((error) => {
+            statusEl.classList.add("error");
+            statusEl.textContent = "Setup failed: " + error.message;
+          });
+      } else {
+        statusEl.textContent = "Not signed in yet.";
+      }
+    </script>
+  `;
+}
+
+function renderPage(options: { endpoint: string; setup: string }): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCP Gateway Playground</title>
+  <style>${pageStyles}</style>
+</head>
+<body>
+  <main>
+    <h1>MCP Gateway Playground</h1>
+    <p class="lede">This Custom Extension exposes an authenticated MCP endpoint.</p>
+    <p><code>${escapeHtml(options.endpoint)}</code></p>
+    ${options.setup}
+  </main>
+</body>
+</html>`;
+}
+
+export function renderExtensionPage(configReader: ConfigReader, req: Request, setupAvailable: boolean): string {
+  const endpoint = mcpUrl(configReader, req);
+  const setupBaseUrl = installedExtensionBaseUrl(configReader, req);
+  const setup = setupAvailable
+    ? renderSetupSection({ endpoint, setupBaseUrl })
+    : `<section class="card"><h2>Tenant setup unavailable</h2><p>Update or reinstall this extension so Auth0 can provision its managed setup client.</p></section>`;
+  return renderPage({ endpoint, setup });
+}
+
+export function createExtensionApp(
+  configReader: ConfigReader,
+  initialRequest?: Request,
+  options: { setupOnly?: boolean } = {},
+) {
+  const app = express();
+  const parseSetupBody = [express.json(), express.urlencoded({ extended: false })];
+  app.use((req, res, next) => {
+    // Let Fastify retain ownership of MCP request-body parsing. The dashboard
+    // login callback is form-encoded, so setup routes still need both parsers.
+    if (options.setupOnly && req.path === "/mcp") return next();
+    let index = 0;
+    const parseNext = (error?: unknown) => {
+      if (error) return next(error);
+      const parser = parseSetupBody[index++];
+      return parser ? parser(req, res, parseNext) : next();
+    };
+    return parseNext();
+  });
+
+  const setupAuth = initialRequest ? setupAdminAuth(configReader, initialRequest) : undefined;
+  if (setupAuth) {
+    app.use(setupAuth.routes);
+    app.use("/:extensionName", setupAuth.routes);
+  }
+
+  if (!options.setupOnly) {
+    app.get(extensionRoutes("/health"), (_req, res) => {
+      res.status(200).json({ status: "ok", runtime: process.version });
+    });
+
+    app.get(extensionRoutes("/meta"), (_req, res) => {
+      res.status(200).json(require("../webtask.json"));
+    });
+
+    app.get(
+    [
+      ...extensionRoutes(protectedResourceMetadataPath),
+      ...extensionRoutes(`${protectedResourceMetadataPath}/mcp`),
+    ],
+    (req, res, next) => {
+      try {
+        const issuer = `${tenantOrigin(configReader)}/`;
+        const metadata = new ProtectedResourceMetadataBuilder(mcpUrl(configReader, req), [issuer])
+          .withResourceName("MCP Gateway Playground")
+          .build();
+        return res.json(metadata);
+      } catch (error) {
+        return next(error);
+      }
+    },
+    );
+  }
+
+  if (setupAuth) {
+    app.post(extensionRoutes("/setup/provision"), setupAuth.authenticate, async (req, res, next) => {
+      try {
+        const audience = mcpUrl(configReader, req);
+        const provisioned = await ensureResourceServer(configReader, audience);
+        const { domain, token } = await managementAccessToken(configReader);
+        const [clientGrant] = await Promise.all([
+          ensureThirdPartyClientGrant(configReader, audience),
+          ensureResourceParameterProfile(domain, token),
+        ]);
+        return res.status(200).json({
+          audience: provisioned.audience,
+          issuer: tenantOrigin(configReader),
+          resourceServerId: provisioned.resourceServerId,
+          status: provisioned.status,
+          clientGrantStatus: clientGrant.status,
+        });
+      } catch (error) {
+        return next(error);
+      }
+    });
+
+    app.get(extensionRoutes("/setup/status"), setupAuth.authenticate, async (_req, res, next) => {
+      try {
+        return res.status(200).json(await setupStatus(configReader));
+      } catch (error) {
+        return next(error);
+      }
+    });
+
+    app.post(extensionRoutes("/setup/connections/:connectionId/promote"), setupAuth.authenticate, async (req, res, next) => {
+      try {
+        const connection = await promoteConnection(configReader, req.params.connectionId);
+        return res.status(200).json({ connection });
+      } catch (error) {
+        return next(error);
+      }
+    });
+
+    app.post(extensionRoutes("/setup/dcr/enable"), setupAuth.authenticate, async (_req, res, next) => {
+      try {
+        await enableDynamicClientRegistration(configReader);
+        return res.status(200).json({ dcrEnabled: true });
+      } catch (error) {
+        return next(error);
+      }
+    });
+
+    app.post(extensionRoutes("/setup/cimd/enable"), setupAuth.authenticate, async (_req, res, next) => {
+      try {
+        await enableClientIdMetadataDocument(configReader);
+        return res.status(200).json({ cimdEnabled: true });
+      } catch (error) {
+        return next(error);
+      }
+    });
+  }
+
+  if (!options.setupOnly) {
+    app.get(extensionRoutes("/"), (req, res) => {
+      res.type("html").send(renderExtensionPage(configReader, req, Boolean(setupAuth)));
+    });
+  }
+
+  app.use((error: unknown, _req: Request, res: Response, _next: unknown) => {
+    const candidateStatus =
+      typeof error === "object" && error !== null
+        ? (error as { status?: unknown; statusCode?: unknown }).status ??
+          (error as { statusCode?: unknown }).statusCode
+        : undefined;
+    const status =
+      typeof candidateStatus === "number" && candidateStatus >= 400 && candidateStatus <= 599
+        ? candidateStatus
+        : 500;
+    const message = status < 500 && error instanceof Error ? error.message : "Internal Server Error";
+    if (status >= 500) {
+      console.error("[mcp-apps-playground] request failed", error);
+    } else {
+      console.warn(`[mcp-apps-playground] request rejected (${status})`);
+    }
+    if (!res.headersSent) res.status(status).json({ error: status < 500 ? "request_failed" : "internal_error", message });
+  });
+
+  return app;
+}

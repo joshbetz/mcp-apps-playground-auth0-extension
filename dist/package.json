@@ -1,0 +1,46 @@
+{
+  "name": "mcp-apps-playground-auth0-extension",
+  "version": "1.0.0",
+  "description": "Auth0 Custom Extension hosting the MCP Gateway Playground travel and Auth0 Forms tools.",
+  "author": "atko-scratch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atko-scratch/mcp-apps-playground-auth0-extension.git"
+  },
+  "keywords": [
+    "auth0",
+    "extension",
+    "mcp",
+    "mcp-apps",
+    "travel"
+  ],
+  "private": true,
+  "main": "extension.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "auth0-extension": {
+    "title": "MCP Gateway Playground",
+    "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Model_Context_Protocol_logo.svg",
+    "useHashName": false,
+    "type": "application",
+    "category": "end_user",
+    "initialUrlPath": "/",
+    "auth0": {
+      "createClient": true,
+      "scopes": "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+    },
+    "secrets": {
+      "SESSION_SECRET": {
+        "description": "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
+        "required": true
+      },
+      "PUBLIC_BASE_URL": {
+        "description": "Optional external public MCP origin override, for example https://mcp.example.com. Leave empty for the installed Webtask URL.",
+        "required": false
+      }
+    }
+  }
+}

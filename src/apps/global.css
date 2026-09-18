@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@source "./**/*.{tsx,ts}";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  color-scheme: light dark;
+  --radius: 0.625rem;
+
+  /* Booking.com-adjacent light palette */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+  --primary: oklch(0.32 0.115 261);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.004 264);
+  --secondary-foreground: oklch(0.13 0.028 261.692);
+  --muted: oklch(0.97 0.002 264);
+  --muted-foreground: oklch(0.55 0.02 264);
+  --accent: oklch(0.48 0.15 261);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.5 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.88 0.005 264);
+  --input: oklch(0.88 0.005 264);
+  --ring: oklch(0.48 0.15 261);
+  --success: oklch(0.52 0.14 144);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.72 0.15 60);
+  --warning-foreground: oklch(0.15 0.02 60);
+
+  /*
+   * Fallbacks for MCP host style variables.
+   * The host may override these via the host context theme.
+   */
+  --color-text-primary: light-dark(#1f2937, #f3f4f6);
+  --color-text-inverse: light-dark(#f3f4f6, #1f2937);
+  --color-text-info: light-dark(#1d4ed8, #60a5fa);
+  --color-text-muted: light-dark(#6b7280, #9ca3af);
+  --color-text-danger: light-dark(#dc2626, #f87171);
+  --color-text-success: light-dark(#16a34a, #4ade80);
+  --color-text-warning: light-dark(#d97706, #fbbf24);
+  --color-background-primary: light-dark(#ffffff, #1a1a1a);
+  --color-background-secondary: light-dark(#f9fafb, #262626);
+  --color-background-info: light-dark(#eff6ff, #1e3a5f);
+  --color-border: light-dark(#e5e7eb, #374151);
+  --color-border-strong: light-dark(#d1d5db, #4b5563);
+  --color-ring-primary: light-dark(#3b82f6, #60a5fa);
+  --color-accent: #2563eb;
+  --color-text-on-accent: #ffffff;
+  --border-radius-md: 6px;
+  --border-width-regular: 1px;
+  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --font-text-sm-size: 0.875rem;
+  --font-text-sm-line-height: 1.25rem;
+  --font-text-md-size: 1rem;
+  --font-text-md-line-height: 1.5;
+  --font-heading-lg-size: 1.25rem;
+  --font-heading-lg-line-height: 1.75rem;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+}
+
+.dark {
+  --background: oklch(0.13 0.028 261.692);
+  --foreground: oklch(0.97 0.002 264);
+  --card: oklch(0.18 0.025 261);
+  --card-foreground: oklch(0.97 0.002 264);
+  --popover: oklch(0.18 0.025 261);
+  --popover-foreground: oklch(0.97 0.002 264);
+  --primary: oklch(0.55 0.16 261);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.22 0.02 261);
+  --secondary-foreground: oklch(0.97 0.002 264);
+  --muted: oklch(0.22 0.02 261);
+  --muted-foreground: oklch(0.65 0.015 264);
+  --accent: oklch(0.55 0.16 261);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.6 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.28 0.02 261);
+  --input: oklch(0.28 0.02 261);
+  --ring: oklch(0.55 0.16 261);
+  --success: oklch(0.6 0.14 144);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.8 0.15 60);
+  --warning-foreground: oklch(0.15 0.02 60);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-text-md-size);
+  line-height: var(--font-text-md-line-height);
+  color: var(--color-text-primary);
+  background-color: var(--color-background-primary);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 var(--spacing-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-heading-lg-line-height);
+}
+
+h2 {
+  font-size: var(--font-heading-lg-size);
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--font-mono);
+}
+
+button,
+input {
+  font-family: inherit;
+}

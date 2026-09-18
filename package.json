@@ -1,0 +1,105 @@
+{
+  "name": "mcp-apps-playground-auth0-extension",
+  "version": "1.0.0",
+  "description": "Auth0 Custom Extension hosting the MCP Gateway Playground travel and Auth0 Forms tools.",
+  "author": "atko-scratch",
+  "keywords": [
+    "auth0",
+    "extension",
+    "mcp",
+    "mcp-apps",
+    "travel"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "src/apps"
+  ],
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types --env-file=.env src/index.ts",
+    "start": "node --experimental-strip-types --env-file=.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build:apps": "npm run build --workspace=mcp-apps",
+    "build:apps:watch": "npm run dev --workspace=mcp-apps",
+    "host": "cd ../mcp-ext-apps/examples/basic-host && npm install --silent && SERVERS='[\"http://localhost:3001/mcp\"]' npm run start",
+    "lint": "eslint src/ && npm run lint --workspace=mcp-apps",
+    "lint:fix": "eslint src/ --fix && npm run lint:fix --workspace=mcp-apps",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "clean": "rimraf dist build/bundle.js src/apps/dist",
+    "validate": "node scripts/validate-manifest.mjs",
+    "build:extension": "rimraf dist build/bundle.js && node scripts/validate-manifest.mjs && esbuild src/webtask.ts --bundle --platform=node --format=cjs --target=node22 --loader:.html=text --external:edge --external:superagent-proxy --outfile=dist/extension.js && mkdir -p build && cp dist/extension.js build/bundle.js && node scripts/create-extension-package.mjs && zip -j -q dist/package.zip dist/extension.js dist/package.json",
+    "build": "npm run build:apps && npm run build:extension",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "npm run typecheck && npm run build && npm run smoke"
+  },
+  "dependencies": {
+    "@auth0/auth0-api-js": "^1.6.1",
+    "@auth0/auth0-auth-js": "^1.12.1",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/express": "^4.0.2",
+    "@modelcontextprotocol/ext-apps": "^2.0.0",
+    "@modelcontextprotocol/fastify": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^5.0.1",
+    "auth0-extension-express-tools": "2.1.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.5.0",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.2",
+    "esbuild": "^0.27.0",
+    "rimraf": "^6.0.1",
+    "webtask-json-validator": "^4.1.1",
+    "@types/express": "^4.17.21"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true,
+    "fsevents@2.3.3": true,
+    "esbuild@0.27.0": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atko-scratch/mcp-apps-playground-auth0-extension.git"
+  },
+  "auth0-extension": {
+    "title": "MCP Gateway Playground",
+    "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Model_Context_Protocol_logo.svg",
+    "useHashName": false,
+    "type": "application",
+    "category": "end_user",
+    "initialUrlPath": "/",
+    "auth0": {
+      "createClient": true,
+      "scopes": "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+    },
+    "secrets": {
+      "SESSION_SECRET": {
+        "description": "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
+        "required": true
+      },
+      "PUBLIC_BASE_URL": {
+        "description": "Optional external public MCP origin override, for example https://mcp.example.com. Leave empty for the installed Webtask URL.",
+        "required": false
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+}
+
+.spinnerWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.muted {
+  padding: var(--spacing-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-text-sm-size);
+}
+
+.danger {
+  padding: var(--spacing-md);
+  color: var(--color-text-danger);
+  font-size: var(--font-text-sm-size);
+}
