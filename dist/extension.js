@@ -207058,7 +207058,7 @@ var require_urlHelpers = __commonJS({
       const normalizeRouteRx = createRouteNormalizationRx(req.x_wt);
       const requestOriginalUrl = req.url;
       const requestUrl = req.url.replace(normalizeRouteRx, "/");
-      const requestPath = url2.parse(requestUrl || "").pathname;
+      const requestPath2 = url2.parse(requestUrl || "").pathname;
       const isIsolatedDomain = req.x_wt && req.x_wt.ectx && req.x_wt.ectx.ISOLATED_DOMAIN || false;
       const originalUrl = url2.parse(requestOriginalUrl || "").pathname || "";
       var webtaskUrl;
@@ -207068,7 +207068,7 @@ var require_urlHelpers = __commonJS({
         webtaskUrl = url2.format({
           protocol: "https",
           host: req.headers.host,
-          pathname: originalUrl.replace(requestPath, "").replace(/\/$/g, "")
+          pathname: originalUrl.replace(requestPath2, "").replace(/\/$/g, "")
         });
         const trigger = ".it.auth0.com/api/run/" + req.x_wt.container + "/";
         const regionalUrl = getWTRegionalUrl(webtaskUrl, req.x_wt.container);
@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.2",
+      version: "1.0.3",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -250019,6 +250019,46 @@ var travel_default = travelRoutes;
 // src/plugins/auth.ts
 var import_fastify_plugin2 = __toESM(require_plugin(), 1);
 
+// src/diagnostics.ts
+var import_node_crypto2 = require("node:crypto");
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function safeCode(error51) {
+  if (!isRecord(error51) || typeof error51.code !== "string") return void 0;
+  return /^[A-Za-z0-9_.-]{1,80}$/.test(error51.code) ? error51.code : void 0;
+}
+function tokenDiagnostics(token) {
+  const segments = token.split(".");
+  return {
+    fingerprint: (0, import_node_crypto2.createHash)("sha256").update(token).digest("hex").slice(0, 12),
+    length: token.length,
+    segmentCount: segments.length,
+    compactJwtShape: segments.length === 3 && segments.every(Boolean)
+  };
+}
+function errorDiagnostics(error51) {
+  const status = isRecord(error51) && typeof error51.statusCode === "number" ? error51.statusCode : isRecord(error51) && typeof error51.status === "number" ? error51.status : void 0;
+  return {
+    errorCode: safeCode(error51),
+    errorName: error51 instanceof Error ? error51.name : typeof error51,
+    status
+  };
+}
+function mcpRequestDiagnostics(body) {
+  if (!isRecord(body)) return { mcpMethod: "unparsed" };
+  const mcpMethod = typeof body.method === "string" ? body.method.slice(0, 120) : "unknown";
+  const params = isRecord(body.params) ? body.params : void 0;
+  const toolName = mcpMethod === "tools/call" && typeof params?.name === "string" ? params.name.slice(0, 120) : void 0;
+  return { mcpMethod, toolName };
+}
+function valueFingerprint(value) {
+  return (0, import_node_crypto2.createHash)("sha256").update(value).digest("hex").slice(0, 12);
+}
+function requestPath(url2) {
+  return url2.split("?", 1)[0] || "/";
+}
+
 // src/server/context.ts
 var import_node_async_hooks2 = require("node:async_hooks");
 var requestContext = new import_node_async_hooks2.AsyncLocalStorage();
@@ -250072,8 +250112,8 @@ function buildAuthInfo(user, token) {
     // project extension — not part of the MCP SDK AuthInfo spec (see ADR-0003)
   };
 }
-function buildRequestContext(user, token, publicBaseUrl) {
-  return { token, user, publicBaseUrl };
+function buildRequestContext(user, token, publicBaseUrl, diagnostics) {
+  return { ...diagnostics, token, user, publicBaseUrl };
 }
 
 // src/server/errors.ts
@@ -250111,14 +250151,34 @@ var authPlugin = (0, import_fastify_plugin2.default)(
     const endpoint = new URL(mcpUrl2);
     const resourceMetadataUrl = `${endpoint.origin}/.well-known/oauth-protected-resource${endpoint.pathname}`;
     const wwwAuthHeader = (error51, description) => `Bearer realm="mcp", resource_metadata="${resourceMetadataUrl}", error="${error51}", error_description="${sanitizeDescription(description)}"`;
-    fastify.setErrorHandler((err, _request, reply) => {
+    fastify.setErrorHandler((err, request, reply) => {
       if (err instanceof InsufficientScopeError) {
+        fastify.log.warn(
+          { event: "mcp.authorization.denied", ...errorDiagnostics(err), path: requestPath(request.url), requestId: request.id },
+          "MCP request rejected because the token lacks a required scope"
+        );
         return reply.header("WWW-Authenticate", wwwAuthHeader("insufficient_scope", err.message)).code(403).send({ error: "Forbidden", message: err.message });
       }
       if (err instanceof AuthenticationError) {
+        const token = extractBearerToken(request.headers.authorization);
+        fastify.log.warn(
+          {
+            event: "mcp.authentication.denied",
+            ...errorDiagnostics(err),
+            requestId: request.id,
+            token: token ? tokenDiagnostics(token) : void 0,
+            path: requestPath(request.url)
+          },
+          "MCP request rejected during bearer-token authentication"
+        );
         return reply.header("WWW-Authenticate", wwwAuthHeader("invalid_token", err.message)).code(401).send({ error: "Unauthorized", message: err.message });
       }
-      reply.code(err.statusCode ?? 500).send(err);
+      const statusCode = err.statusCode ?? 500;
+      fastify.log.error(
+        { event: "mcp.request.failed", ...errorDiagnostics(err), path: requestPath(request.url), requestId: request.id, statusCode },
+        "Unhandled MCP extension request failure"
+      );
+      reply.code(statusCode).send(err);
     });
     const metadata = new ProtectedResourceMetadataBuilder(
       mcpUrl2,
@@ -250132,11 +250192,39 @@ var authPlugin = (0, import_fastify_plugin2.default)(
     });
     fastify.decorate("requireAuth", () => async (req) => {
       const token = extractBearerToken(req.headers.authorization);
-      if (!token) throw new AuthenticationError("Missing Bearer token");
+      if (!token) {
+        fastify.log.warn(
+          { event: "mcp.authentication.missing_bearer", path: requestPath(req.url), requestId: req.id },
+          "MCP request did not include a Bearer token"
+        );
+        throw new AuthenticationError("Missing Bearer token");
+      }
       try {
         const claims = await client.verifyAccessToken({ accessToken: token });
         req.user = buildUser(claims);
+        fastify.log.info(
+          {
+            event: "mcp.authentication.verified",
+            permissionCount: req.user.permissions.length,
+            requestId: req.id,
+            scopeCount: req.user.scopes.length,
+            scopes: req.user.scopes,
+            subjectFingerprint: valueFingerprint(req.user.sub),
+            path: requestPath(req.url)
+          },
+          "MCP bearer token verified"
+        );
       } catch (err) {
+        fastify.log.warn(
+          {
+            event: "mcp.authentication.verification_failed",
+            ...errorDiagnostics(err),
+            requestId: req.id,
+            token: tokenDiagnostics(token),
+            path: requestPath(req.url)
+          },
+          "MCP bearer-token verification failed"
+        );
         const errorMessage = err instanceof Error ? err.message : "Token verification failed";
         throw new AuthenticationError(errorMessage);
       }
@@ -250499,15 +250587,55 @@ function internalServerErrorResponse2(id) {
 function createMcpPlugin(handler2) {
   return async function mcpPlugin(fastify) {
     const nodeHandler = toNodeHandler(handler2);
+    fastify.decorateRequest("mcpDiagnostics", void 0);
+    fastify.addHook("preValidation", async (req) => {
+      const diagnostics = mcpRequestDiagnostics(req.body);
+      req.mcpDiagnostics = diagnostics;
+      fastify.log.info(
+        { event: "mcp.request.received", path: requestPath(req.url), requestId: req.id, ...diagnostics },
+        "MCP request received"
+      );
+    });
+    fastify.addHook("onResponse", async (req, reply) => {
+      if (!req.mcpDiagnostics) return;
+      fastify.log.info(
+        {
+          event: "mcp.response.completed",
+          requestId: req.id,
+          statusCode: reply.statusCode,
+          path: requestPath(req.url),
+          ...req.mcpDiagnostics
+        },
+        "MCP response completed"
+      );
+    });
     fastify.addHook("preHandler", fastify.requireAuth());
     fastify.all("/mcp", async (req, reply) => {
       const user = req.user;
       const token = req.getToken();
+      const diagnostics = req.mcpDiagnostics ?? mcpRequestDiagnostics(req.body);
       req.raw.auth = buildAuthInfo(user, token);
-      await requestContext.run(
-        buildRequestContext(user, token, fastify.config.SERVER_URL),
-        () => nodeHandler(req.raw, reply.raw, req.body)
-      );
+      try {
+        await requestContext.run(
+          buildRequestContext(user, token, fastify.config.SERVER_URL, {
+            logger: fastify.log,
+            requestId: req.id,
+            ...diagnostics
+          }),
+          () => nodeHandler(req.raw, reply.raw, req.body)
+        );
+      } catch (error51) {
+        fastify.log.error(
+          {
+            event: "mcp.handler.failed",
+            ...errorDiagnostics(error51),
+            requestId: req.id,
+            ...diagnostics
+          },
+          "MCP protocol handler failed"
+        );
+        throw error51;
+      }
     });
   };
 }
@@ -250532,7 +250660,7 @@ function formsSdkUrl() {
 var RESOURCE_URI = "ui://auth0-forms/mcp-app.html";
 
 // src/toolkits/auth0-forms/update-payment-details.ts
-var import_node_crypto2 = require("node:crypto");
+var import_node_crypto3 = require("node:crypto");
 var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
 
 // src/server/scopes.ts
@@ -250544,10 +250672,46 @@ function withRequiredAuth(requirements, handler2) {
     if (required2.length) {
       const missing = required2.filter((s) => !ctx.user.scopes.includes(s));
       if (missing.length) {
+        ctx.logger.warn(
+          {
+            event: "mcp.tool.scope_denied",
+            grantedScopeCount: ctx.user.scopes.length,
+            mcpMethod: ctx.mcpMethod,
+            missingScopes: missing,
+            requestId: ctx.requestId,
+            requiredScopes: required2,
+            toolName: ctx.toolName
+          },
+          "MCP tool rejected because the token is missing required scopes"
+        );
         throw new InsufficientScopeError(`insufficient_scope: ${missing.join(", ")}`);
       }
     }
-    return handler2(...args);
+    try {
+      const result = await handler2(...args);
+      ctx.logger.info(
+        {
+          event: "mcp.tool.completed",
+          mcpMethod: ctx.mcpMethod,
+          requestId: ctx.requestId,
+          toolName: ctx.toolName
+        },
+        "MCP tool completed"
+      );
+      return result;
+    } catch (error51) {
+      ctx.logger.warn(
+        {
+          event: "mcp.tool.failed",
+          ...errorDiagnostics(error51),
+          mcpMethod: ctx.mcpMethod,
+          requestId: ctx.requestId,
+          toolName: ctx.toolName
+        },
+        "MCP tool failed"
+      );
+      throw error51;
+    }
   });
 }
 
@@ -250566,7 +250730,7 @@ function registerUpdatePaymentDetails(server) {
     withRequiredAuth({ scopes: "read:account" }, async () => {
       const user = getCallerUser();
       const contextJwt = import_jsonwebtoken.default.sign(
-        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto2.randomUUID)() },
+        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto3.randomUUID)() },
         requireEnv("SESSION_SECRET"),
         { expiresIn: CONTEXT_JWT_TTL }
       );
@@ -250579,7 +250743,7 @@ function registerUpdatePaymentDetails(server) {
 }
 
 // src/toolkits/auth0-forms/update-profile.ts
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
 var FORM_ID2 = "ap_bjZ5qS6RUiyBZXvrL4Fkku";
 var CONTEXT_JWT_TTL2 = "5m";
@@ -250595,7 +250759,7 @@ function registerUpdateProfile(server) {
     withRequiredAuth({ scopes: "read:account" }, async () => {
       const user = getCallerUser();
       const contextJwt = import_jsonwebtoken2.default.sign(
-        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto3.randomUUID)() },
+        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto4.randomUUID)() },
         requireEnv("SESSION_SECRET"),
         { expiresIn: CONTEXT_JWT_TTL2 }
       );
@@ -250928,7 +251092,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.2",
+  version: "1.0.3",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -250957,7 +251121,25 @@ var webtask_default = {
 
 // src/server.ts
 async function buildServer(config2, configReader, initialRequest) {
-  const app = (0, import_fastify.default)({ logger: { level: "info" } });
+  const app = (0, import_fastify.default)({
+    logger: {
+      level: "info",
+      redact: {
+        paths: ["req.headers.authorization", "req.headers.cookie", "res.headers.set-cookie"],
+        remove: true
+      }
+    }
+  });
+  app.log.info(
+    {
+      auth0Domain: config2.AUTH0_DOMAIN,
+      audience: config2.AUTH0_AUDIENCE,
+      event: "extension.initialized",
+      formsSdkUrl: `https://${config2.AUTH0_DOMAIN}/forms/sdk/forms.js`,
+      runtime: process.version
+    },
+    "MCP playground extension initialized"
+  );
   await app.register(configPlugin, { config: config2 });
   await app.register(cors_default);
   await app.register(authPlugin);

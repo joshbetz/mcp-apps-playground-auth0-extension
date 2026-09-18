@@ -99,3 +99,23 @@ The build generates and validates the files required by the legacy importer: `in
 4. Promote a domain-level connection if needed, then connect an OAuth-capable client to the displayed `/mcp` URL.
 
 The new API declares the source tool scopes: `read:destinations`, `read:bookings`, `bookings:write`, and `read:account`. Existing resource servers with the same audience are intentionally not modified.
+
+### Troubleshooting logs
+
+The server writes structured JSON logs that can be correlated by `requestId`.
+They intentionally omit Authorization headers, bearer tokens, cookies, client
+secrets, session secrets, Forms context JWTs, and all MCP tool arguments.
+
+| Event | Meaning |
+| --- | --- |
+| `extension.initialized` | Runtime version, Auth0 domain, exact API audience, and Forms SDK URL. |
+| `mcp.request.received` | MCP protocol method and tool name only. |
+| `mcp.authentication.*` | Missing, verified, or rejected bearer token. Failed-token events contain only a SHA-256 fingerprint prefix, length, and JWT shape. |
+| `mcp.tool.scope_denied` | The required and missing scopes. |
+| `mcp.tool.completed` / `mcp.tool.failed` | The server-side tool outcome; error logs contain structural error fields only. |
+| `mcp.response.completed` | Final HTTP response status for the MCP request. |
+
+If `mcp.tool.completed` appears for an Auth0 Forms tool but its MCP App still
+shows an error, the server has completed successfully; check the browser's
+developer console/network panel for the Forms SDK or tenant-specific form-ID
+failure.

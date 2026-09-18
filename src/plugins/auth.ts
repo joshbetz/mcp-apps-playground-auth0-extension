@@ -3,6 +3,7 @@ import type { FastifyError, FastifyPluginAsync, FastifyRequest, FastifyReply } f
 import fp from 'fastify-plugin';
 
 import { PLUGIN_NAME as CONFIG_PLUGIN_NAME } from '../config.ts';
+import { errorDiagnostics, requestPath, tokenDiagnostics, valueFingerprint } from '../diagnostics.ts';
 import { buildUser } from '../server/context.ts';
 import { AuthenticationError, InsufficientScopeError, sanitizeDescription } from '../server/errors.ts';
 import type { RequestUser } from '../server/index.ts';
@@ -44,20 +45,40 @@ const authPlugin: FastifyPluginAsync = fp(
     const wwwAuthHeader = (error: string, description: string) =>
       `Bearer realm="mcp", resource_metadata="${resourceMetadataUrl}", error="${error}", error_description="${sanitizeDescription(description)}"`;
 
-    fastify.setErrorHandler((err, _request, reply) => {
+    fastify.setErrorHandler((err, request, reply) => {
       if (err instanceof InsufficientScopeError) {
+        fastify.log.warn(
+          { event: 'mcp.authorization.denied', ...errorDiagnostics(err), path: requestPath(request.url), requestId: request.id },
+          'MCP request rejected because the token lacks a required scope',
+        );
         return reply
           .header('WWW-Authenticate', wwwAuthHeader('insufficient_scope', err.message))
           .code(403)
           .send({ error: 'Forbidden', message: err.message });
       }
       if (err instanceof AuthenticationError) {
+        const token = extractBearerToken(request.headers.authorization);
+        fastify.log.warn(
+          {
+            event: 'mcp.authentication.denied',
+            ...errorDiagnostics(err),
+            requestId: request.id,
+            token: token ? tokenDiagnostics(token) : undefined,
+            path: requestPath(request.url),
+          },
+          'MCP request rejected during bearer-token authentication',
+        );
         return reply
           .header('WWW-Authenticate', wwwAuthHeader('invalid_token', err.message))
           .code(401)
           .send({ error: 'Unauthorized', message: err.message });
       }
-      reply.code((err as FastifyError).statusCode ?? 500).send(err);
+      const statusCode = (err as FastifyError).statusCode ?? 500;
+      fastify.log.error(
+        { event: 'mcp.request.failed', ...errorDiagnostics(err), path: requestPath(request.url), requestId: request.id, statusCode },
+        'Unhandled MCP extension request failure',
+      );
+      reply.code(statusCode).send(err);
     });
 
     // The companion .well-known extension owns the host-root discovery path.
@@ -78,11 +99,39 @@ const authPlugin: FastifyPluginAsync = fp(
 
     fastify.decorate('requireAuth', () => async (req: FastifyRequest) => {
       const token = extractBearerToken(req.headers.authorization);
-      if (!token) throw new AuthenticationError('Missing Bearer token');
+      if (!token) {
+        fastify.log.warn(
+          { event: 'mcp.authentication.missing_bearer', path: requestPath(req.url), requestId: req.id },
+          'MCP request did not include a Bearer token',
+        );
+        throw new AuthenticationError('Missing Bearer token');
+      }
       try {
         const claims = await client.verifyAccessToken({ accessToken: token });
         req.user = buildUser(claims);
+        fastify.log.info(
+          {
+            event: 'mcp.authentication.verified',
+            permissionCount: req.user.permissions.length,
+            requestId: req.id,
+            scopeCount: req.user.scopes.length,
+            scopes: req.user.scopes,
+            subjectFingerprint: valueFingerprint(req.user.sub),
+            path: requestPath(req.url),
+          },
+          'MCP bearer token verified',
+        );
       } catch (err) {
+        fastify.log.warn(
+          {
+            event: 'mcp.authentication.verification_failed',
+            ...errorDiagnostics(err),
+            requestId: req.id,
+            token: tokenDiagnostics(token),
+            path: requestPath(req.url),
+          },
+          'MCP bearer-token verification failed',
+        );
         const errorMessage = err instanceof Error ? err.message : 'Token verification failed';
         throw new AuthenticationError(errorMessage);
       }

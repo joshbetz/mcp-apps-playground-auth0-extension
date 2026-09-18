@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { VerifiedAccessTokenClaims } from '@auth0/auth0-api-js';
 import type { AuthInfo } from '@modelcontextprotocol/server';
+import type { FastifyBaseLogger } from 'fastify';
 
 export type RequestUser = {
   sub: string;
@@ -15,7 +16,11 @@ export type RequestUser = {
 };
 
 interface RequestContext {
+  logger: FastifyBaseLogger;
+  mcpMethod: string;
+  requestId: string;
   token: string;
+  toolName?: string;
   user: RequestUser;
   publicBaseUrl: string;
 }
@@ -85,8 +90,13 @@ export function buildAuthInfo(user: RequestUser, token: string): AuthInfo {
   };
 }
 
-export function buildRequestContext(user: RequestUser, token: string, publicBaseUrl: string): RequestContext {
-  return { token, user, publicBaseUrl };
+export function buildRequestContext(
+  user: RequestUser,
+  token: string,
+  publicBaseUrl: string,
+  diagnostics: Pick<RequestContext, 'logger' | 'mcpMethod' | 'requestId' | 'toolName'>,
+): RequestContext {
+  return { ...diagnostics, token, user, publicBaseUrl };
 }
 
 // req.raw.auth is set in plugins/mcp.ts via buildAuthInfo.

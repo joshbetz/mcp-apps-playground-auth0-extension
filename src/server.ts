@@ -22,7 +22,26 @@ export async function buildServer(
   configReader: ConfigReader,
   initialRequest?: Parameters<typeof createExtensionApp>[1],
 ) {
-  const app = Fastify({ logger: { level: 'info' } });
+  const app = Fastify({
+    logger: {
+      level: 'info',
+      redact: {
+        paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers.set-cookie'],
+        remove: true,
+      },
+    },
+  });
+
+  app.log.info(
+    {
+      auth0Domain: config.AUTH0_DOMAIN,
+      audience: config.AUTH0_AUDIENCE,
+      event: 'extension.initialized',
+      formsSdkUrl: `https://${config.AUTH0_DOMAIN}/forms/sdk/forms.js`,
+      runtime: process.version,
+    },
+    'MCP playground extension initialized',
+  );
 
   await app.register(configPlugin, { config });
   await app.register(corsPlugin);

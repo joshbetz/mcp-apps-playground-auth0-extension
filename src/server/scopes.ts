@@ -1,4 +1,5 @@
 import { requestContext } from './context.ts';
+import { errorDiagnostics } from '../diagnostics.ts';
 import { AuthenticationError, InsufficientScopeError } from './errors.ts';
 
 export interface AuthRequirements {
@@ -22,11 +23,47 @@ export function withRequiredAuth<F extends (...args: any[]) => any>(
     if (required.length) {
       const missing = required.filter((s: string) => !ctx.user.scopes.includes(s));
       if (missing.length) {
+        ctx.logger.warn(
+          {
+            event: 'mcp.tool.scope_denied',
+            grantedScopeCount: ctx.user.scopes.length,
+            mcpMethod: ctx.mcpMethod,
+            missingScopes: missing,
+            requestId: ctx.requestId,
+            requiredScopes: required,
+            toolName: ctx.toolName,
+          },
+          'MCP tool rejected because the token is missing required scopes',
+        );
         throw new InsufficientScopeError(`insufficient_scope: ${missing.join(', ')}`);
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (handler as (...a: any[]) => any)(...args);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (handler as (...a: any[]) => any)(...args);
+      ctx.logger.info(
+        {
+          event: 'mcp.tool.completed',
+          mcpMethod: ctx.mcpMethod,
+          requestId: ctx.requestId,
+          toolName: ctx.toolName,
+        },
+        'MCP tool completed',
+      );
+      return result;
+    } catch (error) {
+      ctx.logger.warn(
+        {
+          event: 'mcp.tool.failed',
+          ...errorDiagnostics(error),
+          mcpMethod: ctx.mcpMethod,
+          requestId: ctx.requestId,
+          toolName: ctx.toolName,
+        },
+        'MCP tool failed',
+      );
+      throw error;
+    }
   }) as unknown as F;
 }
