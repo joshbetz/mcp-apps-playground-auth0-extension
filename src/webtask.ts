@@ -73,7 +73,10 @@ function installedBaseUrl(context: WebtaskContext, req: WebtaskRequest): string 
 const handler = webtaskTools.fromConnect((req: WebtaskRequest, res: ServerResponse) => {
   const context = req.webtaskContext ?? {};
   const installedBase = installedBaseUrl(context, req);
-  const publicBase = (readContextValue(context, 'PUBLIC_BASE_URL') ?? installedBase).replace(/\/$/, '');
+  // Optional extension settings are supplied as empty strings by the legacy
+  // dashboard. Treat an empty override as absent so the installed URL wins.
+  const configuredPublicBase = readContextValue(context, 'PUBLIC_BASE_URL')?.trim();
+  const publicBase = (configuredPublicBase || installedBase).replace(/\/$/, '');
   const configReader = (key: string) => key === 'PUBLIC_WT_URL' ? installedBase : readContextValue(context, key);
   const config = parseConfig({
     AUTH0_AUDIENCE: `${publicBase}/mcp`,

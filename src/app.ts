@@ -422,6 +422,16 @@ function extensionRoutes(path: string): string[] {
   return [path, `/:extensionName${path}`];
 }
 
+function extensionBasePath(initialRequest?: Request): string {
+  if (!initialRequest) return '';
+
+  const originalPath = (initialRequest.originalUrl ?? '').split('?', 1)[0];
+  const normalizedPath = (initialRequest.url ?? '').split('?', 1)[0];
+  if (!originalPath || !normalizedPath || !originalPath.endsWith(normalizedPath)) return '';
+
+  return originalPath.slice(0, -normalizedPath.length).replace(/\/$/, '');
+}
+
 const pageStyles = `
   :root { color-scheme: light; }
   body { margin: 0; padding: 2.5rem 1.5rem; background: #f6f5f4; color: #1a1523; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -672,6 +682,20 @@ export function createExtensionApp(
   options: { setupOnly?: boolean } = {},
 ) {
   const app = express();
+  const basePath = extensionBasePath(initialRequest);
+
+  // webtask-tools correctly strips the extension slug from req.url for routing.
+  // auth0-extension-express-tools uses originalUrl to construct its OAuth
+  // callback URL, however @fastify/express normalizes it too. Restore the slug
+  // only for that setup sub-app so the callback remains inside this extension.
+  if (basePath) {
+    app.use((req, _res, next) => {
+      const requestUrl = req.url.startsWith('/') ? req.url : `/${req.url}`;
+      req.originalUrl = `${basePath}${requestUrl}`;
+      next();
+    });
+  }
+
   const parseSetupBody = [express.json(), express.urlencoded({ extended: false })];
   app.use((req, res, next) => {
     // Let Fastify retain ownership of MCP request-body parsing. The dashboard

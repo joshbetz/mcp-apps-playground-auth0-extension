@@ -61,7 +61,12 @@ try {
   if (meta.status !== 200 || JSON.parse(meta.body).name !== "mcp-apps-playground") {
     throw new Error(`Unexpected meta response: ${meta.status} ${meta.body}`);
   }
-  if (login.status !== 302 || !String(login.location).includes("/authorize")) {
+  const expectedSetupCallback = encodeURIComponent(`https://127.0.0.1:${port}/mcp-apps-playground/.extensions/setup/login/callback`);
+  if (
+    login.status !== 302 ||
+    !String(login.location).includes("/authorize") ||
+    !String(login.location).includes(`redirect_uri=${expectedSetupCallback}`)
+  ) {
     throw new Error(`Unexpected login response: ${login.status} ${login.location}`);
   }
   if (provision.status !== 401) {

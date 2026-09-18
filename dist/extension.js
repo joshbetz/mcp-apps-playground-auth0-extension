@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.1",
+      version: "1.0.2",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -249005,6 +249005,13 @@ function escapeInlineJson(value) {
 function extensionRoutes(path) {
   return [path, `/:extensionName${path}`];
 }
+function extensionBasePath(initialRequest) {
+  if (!initialRequest) return "";
+  const originalPath = (initialRequest.originalUrl ?? "").split("?", 1)[0];
+  const normalizedPath = (initialRequest.url ?? "").split("?", 1)[0];
+  if (!originalPath || !normalizedPath || !originalPath.endsWith(normalizedPath)) return "";
+  return originalPath.slice(0, -normalizedPath.length).replace(/\/$/, "");
+}
 var pageStyles = `
   :root { color-scheme: light; }
   body { margin: 0; padding: 2.5rem 1.5rem; background: #f6f5f4; color: #1a1523; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -249245,6 +249252,14 @@ function renderExtensionPage(configReader, req, setupAvailable) {
 }
 function createExtensionApp(configReader, initialRequest, options2 = {}) {
   const app = (0, import_express.default)();
+  const basePath = extensionBasePath(initialRequest);
+  if (basePath) {
+    app.use((req, _res, next) => {
+      const requestUrl = req.url.startsWith("/") ? req.url : `/${req.url}`;
+      req.originalUrl = `${basePath}${requestUrl}`;
+      next();
+    });
+  }
   const parseSetupBody = [import_express.default.json(), import_express.default.urlencoded({ extended: false })];
   app.use((req, res, next) => {
     if (options2.setupOnly && req.path === "/mcp") return next();
@@ -250913,7 +250928,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.1",
+  version: "1.0.2",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -251003,7 +251018,8 @@ function installedBaseUrl(context, req) {
 var handler = webtaskTools.fromConnect((req, res) => {
   const context = req.webtaskContext ?? {};
   const installedBase = installedBaseUrl(context, req);
-  const publicBase = (readContextValue(context, "PUBLIC_BASE_URL") ?? installedBase).replace(/\/$/, "");
+  const configuredPublicBase = readContextValue(context, "PUBLIC_BASE_URL")?.trim();
+  const publicBase = (configuredPublicBase || installedBase).replace(/\/$/, "");
   const configReader = (key) => key === "PUBLIC_WT_URL" ? installedBase : readContextValue(context, key);
   const config2 = parseConfig({
     AUTH0_AUDIENCE: `${publicBase}/mcp`,
