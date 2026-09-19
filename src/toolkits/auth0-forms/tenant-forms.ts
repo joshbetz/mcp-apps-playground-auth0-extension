@@ -110,22 +110,59 @@ export async function listTenantForms(
   return request;
 }
 
-function formToolName(formId: string): string {
-  const fingerprint = createHash("sha256")
+function formFingerprint(formId: string): string {
+  return createHash("sha256")
     .update(formId)
     .digest("hex")
     .slice(0, 12);
-  return `open_auth0_form_${fingerprint}`;
+}
+
+function formToolBaseName(formName: string, formId: string): string {
+  const slug = formName
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    // Leave room for an ID-derived suffix when two Forms normalize to the
+    // same tool name. MCP tool names are limited to 128 characters.
+    .slice(0, 96);
+
+  return slug ? `open_${slug}` : `open_form_${formFingerprint(formId)}`;
+}
+
+function formToolNames(forms: TenantForm[]): Map<string, string> {
+  const baseNames = new Map<string, string>();
+  const baseNameCounts = new Map<string, number>();
+
+  for (const form of forms) {
+    const baseName = formToolBaseName(form.name, form.id);
+    baseNames.set(form.id, baseName);
+    baseNameCounts.set(baseName, (baseNameCounts.get(baseName) ?? 0) + 1);
+  }
+
+  return new Map(
+    forms.map((form) => {
+      const baseName = baseNames.get(form.id)!;
+      const hasNameCollision = (baseNameCounts.get(baseName) ?? 0) > 1;
+      return [
+        form.id,
+        hasNameCollision ? `${baseName}_${formFingerprint(form.id)}` : baseName,
+      ];
+    }),
+  );
 }
 
 export function registerTenantForms(
   server: McpServer,
   forms: TenantForm[],
 ): void {
+  const toolNames = formToolNames(forms);
+
   for (const form of forms) {
     registerAppTool(
       server,
-      formToolName(form.id),
+      toolNames.get(form.id)!,
       {
         description: `Open the Auth0 Form “${form.name}” as a sandboxed MCP App. Sensitive fields stay inside the iframe and never transit through the LLM.`,
         inputSchema: z.object({}),

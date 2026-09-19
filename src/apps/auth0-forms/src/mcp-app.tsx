@@ -30,6 +30,7 @@ function App() {
   const [sdkReady, setSdkReady] = useState(() => !!window.Auth0Forms);
   const [embedError, setEmbedError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const embeddedFormKeyRef = useRef<string | null>(null);
 
   const { app, isConnected, error } = useApp({
     appInfo: { name: 'auth0-forms', version: '1.0.0' },
@@ -67,17 +68,35 @@ function App() {
     if (!sdkReady || !formData || !containerRef.current) return;
 
     const container = containerRef.current;
+    const data = formData;
+    const embedKey = `${data.formId}\u0000${data.contextJwt}`;
+
+    // MCP hosts can replay a tool-result notification. The Forms SDK appends
+    // its iframe to the supplied element, so embedding the same result again
+    // would show the form twice.
+    if (embeddedFormKeyRef.current === embedKey) return;
+
+    embeddedFormKeyRef.current = embedKey;
+    setEmbedError(false);
+    container.replaceChildren();
+    let cancelled = false;
 
     async function embed(): Promise<void> {
       try {
-        await window.Auth0Forms!.embed(formData!.formId, container, {
-          fields: { context_token: formData!.contextJwt },
+        await window.Auth0Forms!.embed(data.formId, container, {
+          fields: { context_token: data.contextJwt },
         });
       } catch {
+        if (cancelled || embeddedFormKeyRef.current !== embedKey) return;
+        embeddedFormKeyRef.current = null;
         setEmbedError(true);
       }
     }
     void embed();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sdkReady, formData]);
 
   // Listen for form submission and close the app.
