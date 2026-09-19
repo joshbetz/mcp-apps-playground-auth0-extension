@@ -1,4 +1,8 @@
-import { registerAppResource, registerAppTool } from '@modelcontextprotocol/ext-apps/server';
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
@@ -8,7 +12,6 @@ import type { TripSearchResult } from './types.ts';
 import { getTravelBaseUrl } from './urls.ts';
 
 const RESOURCE_URI = 'ui://book-trip';
-const RESOURCE_MIME_TYPE = 'text/html';
 const bookTripHtml = require('../../apps/dist/book-trip/mcp-app.html') as string;
 
 export function registerBookTrip(server: McpServer): void {

@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.1.2",
+      version: "1.1.3",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -250887,7 +250887,6 @@ function getTravelBaseUrl() {
 
 // src/toolkits/bookings/book-trip.ts
 var RESOURCE_URI2 = "ui://book-trip";
-var RESOURCE_MIME_TYPE = "text/html";
 var bookTripHtml = require_mcp_app2();
 function registerBookTrip(server) {
   const schema = external_exports.object({
@@ -250943,7 +250942,7 @@ function registerBookTrip(server) {
     )
   );
   G(server, "Book a Trip", RESOURCE_URI2, {}, async () => {
-    return { contents: [{ uri: RESOURCE_URI2, mimeType: RESOURCE_MIME_TYPE, text: bookTripHtml }] };
+    return { contents: [{ uri: RESOURCE_URI2, mimeType: L, text: bookTripHtml }] };
   });
 }
 
@@ -251046,7 +251045,6 @@ ${lineItemText}
 
 // src/toolkits/history/get-travel-history.ts
 var RESOURCE_URI3 = "ui://travel-history";
-var RESOURCE_MIME_TYPE2 = "text/html";
 var travelHistoryHtml = require_mcp_app3();
 function registerGetTravelHistory(server) {
   j(
@@ -251086,7 +251084,7 @@ function registerGetTravelHistory(server) {
     )
   );
   G(server, "Travel History", RESOURCE_URI3, {}, async () => {
-    return { contents: [{ uri: RESOURCE_URI3, mimeType: RESOURCE_MIME_TYPE2, text: travelHistoryHtml }] };
+    return { contents: [{ uri: RESOURCE_URI3, mimeType: L, text: travelHistoryHtml }] };
   });
 }
 
@@ -251103,7 +251101,6 @@ function getTravelBaseUrl3() {
 
 // src/toolkits/recommendations/search-destinations.ts
 var RESOURCE_URI4 = "ui://recommendations";
-var RESOURCE_MIME_TYPE3 = "text/html";
 var recommendationsHtml = require_mcp_app4();
 function registerSearchDestinations(server) {
   const schema = external_exports.object({
@@ -251151,7 +251148,7 @@ function registerSearchDestinations(server) {
     )
   );
   G(server, "Travel Recommendations", RESOURCE_URI4, {}, async () => {
-    return { contents: [{ uri: RESOURCE_URI4, mimeType: RESOURCE_MIME_TYPE3, text: recommendationsHtml }] };
+    return { contents: [{ uri: RESOURCE_URI4, mimeType: L, text: recommendationsHtml }] };
   });
 }
 
@@ -251164,7 +251161,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.1.2",
+  version: "1.1.3",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
