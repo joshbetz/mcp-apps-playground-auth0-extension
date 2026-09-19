@@ -75,7 +75,6 @@ export async function buildServer(
           { event: 'forms.discovery.failed', ...errorDiagnostics(error) },
           'Unable to discover tenant Forms',
         );
-        throw new Error('Unable to load Auth0 Forms for this request.');
       }
     }
     registerAuth0FormsTools(mcpServer, forms);

@@ -82,7 +82,7 @@ The extension runs on Node 22 and requires these settings:
 
 `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, and `EXTENSION_SECRET` are supplied by Auth0 at runtime. Do not add, expose, or log them as settings.
 
-Auth0 Forms are discovered from the installed tenant at MCP request time. The extension's managed Management API client requests only `read:forms` for this, and a caller must hold the existing `read:account` MCP scope before Form tools are exposed. Each available Form becomes an `open_auth0_form_*` MCP App tool. Form IDs do not belong in extension settings.
+Auth0 Forms are discovered from the installed tenant at MCP request time. The extension's managed Management API client requests only `read:forms` for this, and a caller must hold the existing `read:account` MCP scope before Form tools are exposed. Each available Form becomes an `open_auth0_form_*` MCP App tool. Form IDs do not belong in extension settings. If Form discovery is temporarily unavailable, the MCP server remains connected and exposes its non-Forms tools.
 
 ### Build and publish
 

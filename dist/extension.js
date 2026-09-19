@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.1.0",
+      version: "1.1.1",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -248821,7 +248821,9 @@ async function managementAccessToken(config2) {
     headers: { "content-type": "application/json" },
     method: "POST"
   });
-  if (!response.ok) throw new Error(`Unable to obtain a Management API token (${response.status}).`);
+  if (!response.ok) {
+    throw new ManagementApiError(`Unable to obtain a Management API token (${response.status}).`, response.status);
+  }
   const payload = await response.json();
   if (typeof payload.access_token !== "string" || !payload.access_token) {
     throw new Error("The Management API token response did not contain an access token.");
@@ -251139,7 +251141,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.1.0",
+  version: "1.1.1",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -251207,7 +251209,6 @@ async function buildServer(config2, configReader, initialRequest) {
           { event: "forms.discovery.failed", ...errorDiagnostics(error51) },
           "Unable to discover tenant Forms"
         );
-        throw new Error("Unable to load Auth0 Forms for this request.");
       }
     }
     registerAuth0FormsTools(mcpServer, forms);
