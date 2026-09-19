@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.4",
+      version: "1.0.5",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -210253,6 +210253,10 @@ var require_webtask = __commonJS({
       secrets: {
         SESSION_SECRET: {
           description: "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
+          required: true
+        },
+        AUTH0_FORMS_PROFILE_FORM_ID: {
+          description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
           required: true
         },
         PUBLIC_BASE_URL: {
@@ -250745,7 +250749,6 @@ function registerUpdatePaymentDetails(server) {
 // src/toolkits/auth0-forms/update-profile.ts
 var import_node_crypto4 = require("node:crypto");
 var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
-var FORM_ID2 = "ap_6yKY4GhTrRudVqb4auevMv";
 var CONTEXT_JWT_TTL2 = "5m";
 function registerUpdateProfile(server) {
   j(
@@ -250758,6 +250761,7 @@ function registerUpdateProfile(server) {
     },
     withRequiredAuth({ scopes: "read:account" }, async () => {
       const user = getCallerUser();
+      const formId = requireEnv("AUTH0_FORMS_PROFILE_FORM_ID");
       const contextJwt = import_jsonwebtoken2.default.sign(
         { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto4.randomUUID)() },
         requireEnv("SESSION_SECRET"),
@@ -250765,7 +250769,7 @@ function registerUpdateProfile(server) {
       );
       return {
         content: [{ type: "text", text: "Profile information form ready. Complete it in the panel." }],
-        structuredContent: { formId: FORM_ID2, contextJwt, successMessage: "Profile information updated." }
+        structuredContent: { formId, contextJwt, successMessage: "Profile information updated." }
       };
     })
   );
@@ -251092,7 +251096,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.4",
+  version: "1.0.5",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -251110,6 +251114,10 @@ var webtask_default = {
   secrets: {
     SESSION_SECRET: {
       description: "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
+      required: true
+    },
+    AUTH0_FORMS_PROFILE_FORM_ID: {
+      description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
       required: true
     },
     PUBLIC_BASE_URL: {

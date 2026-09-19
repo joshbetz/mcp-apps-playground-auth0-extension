@@ -1,7 +1,7 @@
 {
   "title": "MCP Gateway Playground",
   "name": "mcp-apps-playground",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "atko-scratch",
   "repository": "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   "keywords": ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -19,6 +19,10 @@
   "secrets": {
     "SESSION_SECRET": {
       "description": "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
+      "required": true
+    },
+    "AUTH0_FORMS_PROFILE_FORM_ID": {
+      "description": "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
       "required": true
     },
     "PUBLIC_BASE_URL": {

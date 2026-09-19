@@ -9,7 +9,6 @@ import { RESOURCE_URI } from './urls.ts';
 import { requireEnv } from '../../env.ts';
 import { getCallerUser, withRequiredAuth } from '../../server/index.ts';
 
-const FORM_ID = 'ap_6yKY4GhTrRudVqb4auevMv';
 const CONTEXT_JWT_TTL = '5m';
 
 export function registerUpdateProfile(server: McpServer): void {
@@ -24,6 +23,7 @@ export function registerUpdateProfile(server: McpServer): void {
     },
     withRequiredAuth({ scopes: 'read:account' }, async () => {
       const user = getCallerUser();
+      const formId = requireEnv('AUTH0_FORMS_PROFILE_FORM_ID');
       const contextJwt = jwt.sign(
         { sub: user.sub, email: user.email, name: user.name, nonce: randomUUID() },
         requireEnv('SESSION_SECRET'),
@@ -31,7 +31,7 @@ export function registerUpdateProfile(server: McpServer): void {
       );
       return {
         content: [{ type: 'text' as const, text: 'Profile information form ready. Complete it in the panel.' }],
-        structuredContent: { formId: FORM_ID, contextJwt, successMessage: 'Profile information updated.' },
+        structuredContent: { formId, contextJwt, successMessage: 'Profile information updated.' },
       };
     }),
   );
