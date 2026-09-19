@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.5",
+      version: "1.0.6",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -210257,6 +210257,10 @@ var require_webtask = __commonJS({
         },
         AUTH0_FORMS_PROFILE_FORM_ID: {
           description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
+          required: true
+        },
+        AUTH0_FORMS_PAYMENT_FORM_ID: {
+          description: "ID of the Auth0 Form used by the Update payment details tool in this tenant, for example ap_abc123.",
           required: true
         },
         PUBLIC_BASE_URL: {
@@ -250720,7 +250724,6 @@ function withRequiredAuth(requirements, handler2) {
 }
 
 // src/toolkits/auth0-forms/update-payment-details.ts
-var FORM_ID = "ap_nuBEAWaQR8x4d76jHZ4EW7";
 var CONTEXT_JWT_TTL = "5m";
 function registerUpdatePaymentDetails(server) {
   j(
@@ -250733,6 +250736,7 @@ function registerUpdatePaymentDetails(server) {
     },
     withRequiredAuth({ scopes: "read:account" }, async () => {
       const user = getCallerUser();
+      const formId = requireEnv("AUTH0_FORMS_PAYMENT_FORM_ID");
       const contextJwt = import_jsonwebtoken.default.sign(
         { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto3.randomUUID)() },
         requireEnv("SESSION_SECRET"),
@@ -250740,7 +250744,7 @@ function registerUpdatePaymentDetails(server) {
       );
       return {
         content: [{ type: "text", text: "Payment details form ready. Complete it in the panel." }],
-        structuredContent: { formId: FORM_ID, contextJwt, successMessage: "Payment details updated." }
+        structuredContent: { formId, contextJwt, successMessage: "Payment details updated." }
       };
     })
   );
@@ -251096,7 +251100,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.5",
+  version: "1.0.6",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -251118,6 +251122,10 @@ var webtask_default = {
     },
     AUTH0_FORMS_PROFILE_FORM_ID: {
       description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
+      required: true
+    },
+    AUTH0_FORMS_PAYMENT_FORM_ID: {
+      description: "ID of the Auth0 Form used by the Update payment details tool in this tenant, for example ap_abc123.",
       required: true
     },
     PUBLIC_BASE_URL: {

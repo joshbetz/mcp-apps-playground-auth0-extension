@@ -44,6 +44,9 @@ if (!manifest.secrets?.SESSION_SECRET?.required) {
 if (!manifest.secrets?.AUTH0_FORMS_PROFILE_FORM_ID?.required) {
   throw new Error("The Update profile tool requires an AUTH0_FORMS_PROFILE_FORM_ID extension setting.");
 }
+if (!manifest.secrets?.AUTH0_FORMS_PAYMENT_FORM_ID?.required) {
+  throw new Error("The Update payment details tool requires an AUTH0_FORMS_PAYMENT_FORM_ID extension setting.");
+}
 
 if (!packagedManifest) throw new Error("package.json is missing its auth0-extension manifest.");
 for (const field of ["title", "logoUrl", "useHashName", "type", "category", "initialUrlPath", "auth0", "secrets"]) {
