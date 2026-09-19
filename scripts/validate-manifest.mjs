@@ -33,19 +33,13 @@ if (manifest.initialUrlPath !== "/") throw new Error('webtask.json.initialUrlPat
 if (manifest.auth0?.createClient !== true) throw new Error("This template requires auth0.createClient: true.");
 if (
   manifest.auth0?.scopes !==
-  "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+  "read:resource_servers create:resource_servers read:forms read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
 ) {
-  throw new Error("This template requires the minimal Management API scopes for setup.");
+  throw new Error("This extension requires the Management API scopes for setup and tenant Form discovery.");
 }
 
 if (!manifest.secrets?.SESSION_SECRET?.required) {
   throw new Error("The existing Auth0 Forms tools require a SESSION_SECRET extension setting.");
-}
-if (!manifest.secrets?.AUTH0_FORMS_PROFILE_FORM_ID?.required) {
-  throw new Error("The Update profile tool requires an AUTH0_FORMS_PROFILE_FORM_ID extension setting.");
-}
-if (!manifest.secrets?.AUTH0_FORMS_PAYMENT_FORM_ID?.required) {
-  throw new Error("The Update payment details tool requires an AUTH0_FORMS_PAYMENT_FORM_ID extension setting.");
 }
 
 if (!packagedManifest) throw new Error("package.json is missing its auth0-extension manifest.");

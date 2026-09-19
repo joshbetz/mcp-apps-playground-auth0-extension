@@ -4,11 +4,13 @@ import Fastify from 'fastify';
 
 import { createExtensionApp, renderExtensionPage } from './app.ts';
 import { type Config, configPlugin } from './config.ts';
+import { errorDiagnostics } from './diagnostics.ts';
 import travelRoutes from './mock/travel.ts';
 import { authPlugin } from './plugins/auth.ts';
 import corsPlugin from './plugins/cors.ts';
 import createMcpPlugin from './plugins/mcp.ts';
 import { registerAuth0FormsTools } from './toolkits/auth0-forms/index.ts';
+import { listTenantForms, type TenantForm } from './toolkits/auth0-forms/tenant-forms.ts';
 import { registerBookingsTools } from './toolkits/bookings/index.ts';
 import { registerHistoryTools } from './toolkits/history/index.ts';
 import { registerRecommendationsTools } from './toolkits/recommendations/index.ts';
@@ -53,14 +55,33 @@ export async function buildServer(
   // source application routes below remain Fastify routes.
   app.use(createExtensionApp(configReader, initialRequest, { setupOnly: true }));
 
-  const mcpServer = new McpServer({ name: 'mcp-server', version: '1.0.0' });
+  const mcpHandler = createMcpHandler(async ({ authInfo }) => {
+    const mcpServer = new McpServer({ name: 'mcp-server', version: '1.0.0' });
 
-  registerRecommendationsTools(mcpServer);
-  registerHistoryTools(mcpServer);
-  registerBookingsTools(mcpServer);
-  registerAuth0FormsTools(mcpServer);
+    registerRecommendationsTools(mcpServer);
+    registerHistoryTools(mcpServer);
+    registerBookingsTools(mcpServer);
 
-  const mcpHandler = createMcpHandler(() => mcpServer);
+    // The factory executes after the MCP bearer token has been verified and
+    // is request-scoped by the SDK. Forms are read only for callers that can
+    // open account forms; the Management API response is never sent to logs.
+    let forms: TenantForm[] = [];
+    if (authInfo?.scopes.includes('read:account')) {
+      try {
+        forms = await listTenantForms(configReader);
+        app.log.info({ event: 'forms.discovery.completed', formCount: forms.length }, 'Tenant Forms discovered');
+      } catch (error) {
+        app.log.warn(
+          { event: 'forms.discovery.failed', ...errorDiagnostics(error) },
+          'Unable to discover tenant Forms',
+        );
+        throw new Error('Unable to load Auth0 Forms for this request.');
+      }
+    }
+    registerAuth0FormsTools(mcpServer, forms);
+
+    return mcpServer;
+  });
 
   await app.register(createMcpPlugin(mcpHandler));
 

@@ -42471,8 +42471,8 @@ var require_core2 = __commonJS({
             return this;
           }
           case "object": {
-            const cacheKey2 = schemaKeyRef;
-            this._cache.delete(cacheKey2);
+            const cacheKey3 = schemaKeyRef;
+            this._cache.delete(cacheKey3);
             let id = schemaKeyRef[this.opts.schemaId];
             if (id) {
               id = (0, resolve_1.normalizeId)(id);
@@ -58694,7 +58694,7 @@ var require_parse_url = __commonJS({
 var require_form_data = __commonJS({
   "node_modules/light-my-request/lib/form-data.js"(exports2, module2) {
     "use strict";
-    var { randomUUID: randomUUID4 } = require("node:crypto");
+    var { randomUUID: randomUUID3 } = require("node:crypto");
     var { Readable: Readable2 } = require("node:stream");
     var textEncoder;
     function isFormDataLike(payload) {
@@ -58702,7 +58702,7 @@ var require_form_data = __commonJS({
     }
     function formDataToStream(formdata) {
       textEncoder = textEncoder ?? new TextEncoder();
-      const boundary = `----formdata-${randomUUID4()}`;
+      const boundary = `----formdata-${randomUUID3()}`;
       const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
       const escape2 = (str) => str.replace(/\n/g, "%0A").replace(/\r/g, "%0D").replace(/"/g, "%22");
@@ -84498,9 +84498,9 @@ var require_jws = __commonJS({
 var require_decode = __commonJS({
   "node_modules/jsonwebtoken/decode.js"(exports2, module2) {
     var jws = require_jws();
-    module2.exports = function(jwt4, options2) {
+    module2.exports = function(jwt3, options2) {
       options2 = options2 || {};
-      var decoded = jws.decode(jwt4, options2);
+      var decoded = jws.decode(jwt3, options2);
       if (!decoded) {
         return null;
       }
@@ -85587,9 +85587,9 @@ var require_callbackHandler = __commonJS({
         return issueAccessToken(ares.body.id_token, ares.body.access_token);
       });
       function issueAccessToken(id_token, access_token) {
-        var jwt4 = require_jsonwebtoken();
+        var jwt3 = require_jsonwebtoken();
         try {
-          req.user = ctx.user = jwt4.decode(id_token);
+          req.user = ctx.user = jwt3.decode(id_token);
         } catch (e2) {
           return options2.loginError({
             code: 502,
@@ -130895,13 +130895,13 @@ var require_aws4 = __commonJS({
       ].join(", ");
     };
     RequestSigner.prototype.signature = function() {
-      var date5 = this.getDate(), cacheKey2 = [this.credentials.secretAccessKey, date5, this.region, this.service].join(), kDate, kRegion, kService, kCredentials = credentialsCache.get(cacheKey2);
+      var date5 = this.getDate(), cacheKey3 = [this.credentials.secretAccessKey, date5, this.region, this.service].join(), kDate, kRegion, kService, kCredentials = credentialsCache.get(cacheKey3);
       if (!kCredentials) {
         kDate = hmac2("AWS4" + this.credentials.secretAccessKey, date5);
         kRegion = hmac2(kDate, this.region);
         kService = hmac2(kRegion, this.service);
         kCredentials = hmac2(kService, "aws4_request");
-        credentialsCache.set(cacheKey2, kCredentials);
+        credentialsCache.set(cacheKey3, kCredentials);
       }
       return hmac2(kCredentials, this.stringToSign(), "hex");
     };
@@ -142639,9 +142639,9 @@ var require_key = __commonJS({
       algo = algo.toLowerCase();
       if (algs.hashAlgs[algo] === void 0)
         throw new InvalidAlgorithmError(algo);
-      var cacheKey2 = algo + "||" + type;
-      if (this._hashCache[cacheKey2])
-        return this._hashCache[cacheKey2];
+      var cacheKey3 = algo + "||" + type;
+      if (this._hashCache[cacheKey3])
+        return this._hashCache[cacheKey3];
       var buf2;
       if (type === "ssh") {
         buf2 = this.toBuffer("rfc4253");
@@ -142651,7 +142651,7 @@ var require_key = __commonJS({
         throw new Error("Hash type " + type + " not supported");
       }
       var hash2 = crypto3.createHash(algo).update(buf2).digest();
-      this._hashCache[cacheKey2] = hash2;
+      this._hashCache[cacheKey3] = hash2;
       return hash2;
     };
     Key.prototype.fingerprint = function(algo, type) {
@@ -151870,8 +151870,8 @@ var require_ajv3 = __commonJS({
           return this;
         case "object":
           var serialize = this._opts.serialize;
-          var cacheKey2 = serialize ? serialize(schemaKeyRef) : schemaKeyRef;
-          this._cache.del(cacheKey2);
+          var cacheKey3 = serialize ? serialize(schemaKeyRef) : schemaKeyRef;
+          this._cache.del(cacheKey3);
           var id = this._getId(schemaKeyRef);
           if (id) {
             id = resolve.normalizeId(id);
@@ -151894,8 +151894,8 @@ var require_ajv3 = __commonJS({
       if (typeof schema != "object" && typeof schema != "boolean")
         throw new Error("schema should be object or boolean");
       var serialize = this._opts.serialize;
-      var cacheKey2 = serialize ? serialize(schema) : schema;
-      var cached3 = this._cache.get(cacheKey2);
+      var cacheKey3 = serialize ? serialize(schema) : schema;
+      var cached3 = this._cache.get(cacheKey3);
       if (cached3) return cached3;
       shouldAddSchema = shouldAddSchema || this._opts.addUsedSchema !== false;
       var id = resolve.normalizeId(this._getId(schema));
@@ -151909,11 +151909,11 @@ var require_ajv3 = __commonJS({
         id,
         schema,
         localRefs,
-        cacheKey: cacheKey2,
+        cacheKey: cacheKey3,
         meta: meta3
       });
       if (id[0] != "#" && shouldAddSchema) this._refs[id] = schemaObj;
-      this._cache.put(cacheKey2, schemaObj);
+      this._cache.put(cacheKey3, schemaObj);
       if (willValidate && recursiveMeta) this.validateSchema(schema, true);
       return schemaObj;
     }
@@ -167443,9 +167443,9 @@ var require_jws2 = __commonJS({
 var require_decode2 = __commonJS({
   "node_modules/auth0-extension-tools/node_modules/jsonwebtoken/decode.js"(exports2, module2) {
     var jws = require_jws2();
-    module2.exports = function(jwt4, options2) {
+    module2.exports = function(jwt3, options2) {
       options2 = options2 || {};
-      var decoded = jws.decode(jwt4, options2);
+      var decoded = jws.decode(jwt3, options2);
       if (!decoded) {
         return null;
       }
@@ -181736,9 +181736,9 @@ var require_jws3 = __commonJS({
 var require_decode3 = __commonJS({
   "node_modules/auth0/node_modules/jsonwebtoken/decode.js"(exports2, module2) {
     var jws = require_jws3();
-    module2.exports = function(jwt4, options2) {
+    module2.exports = function(jwt3, options2) {
       options2 = options2 || {};
-      var decoded = jws.decode(jwt4, options2);
+      var decoded = jws.decode(jwt3, options2);
       if (!decoded) {
         return null;
       }
@@ -189970,9 +189970,9 @@ var require_jws4 = __commonJS({
 var require_decode4 = __commonJS({
   "node_modules/jwks-rsa/node_modules/jsonwebtoken/decode.js"(exports2, module2) {
     var jws = require_jws4();
-    module2.exports = function(jwt4, options2) {
+    module2.exports = function(jwt3, options2) {
       options2 = options2 || {};
-      var decoded = jws.decode(jwt4, options2);
+      var decoded = jws.decode(jwt3, options2);
       if (!decoded) {
         return null;
       }
@@ -191741,7 +191741,7 @@ var require_idToken = __commonJS({
 // node_modules/auth0/src/auth/OAUthWithIDTokenValidation.js
 var require_OAUthWithIDTokenValidation = __commonJS({
   "node_modules/auth0/src/auth/OAUthWithIDTokenValidation.js"(exports2, module2) {
-    var jwt4 = require_jsonwebtoken3();
+    var jwt3 = require_jsonwebtoken3();
     var jwksClient = require_lib20();
     var { ArgumentError } = require_src9();
     var validateIdToken = require_idToken().validate;
@@ -191821,7 +191821,7 @@ var require_OAUthWithIDTokenValidation = __commonJS({
               if (data.maxAge) {
                 options2.maxAge = data.maxAge;
               }
-              jwt4.verify(r.id_token, getKey, options2, (err) => {
+              jwt3.verify(r.id_token, getKey, options2, (err) => {
                 if (err) {
                   if (err.message && err.message.includes(HS256_IGNORE_VALIDATION_MESSAGE)) {
                     console.warn(HS256_IGNORE_VALIDATION_MESSAGE);
@@ -203335,7 +203335,7 @@ var require_node13 = __commonJS({
 var require_managementApi = __commonJS({
   "node_modules/auth0-extension-tools/src/auth0/managementApi.js"(exports2, module2) {
     var ms = require_ms6();
-    var jwt4 = require_jsonwebtoken2();
+    var jwt3 = require_jsonwebtoken2();
     var auth0 = require_src11();
     var Promise2 = require_bluebird();
     var memoizer = require_lru_memoizer();
@@ -203379,7 +203379,7 @@ var require_managementApi = __commonJS({
           },
           itemMaxAge: function(domain2, clientId, clientSecret, accessToken) {
             try {
-              const decodedToken = jwt4.decode(accessToken);
+              const decodedToken = jwt3.decode(accessToken);
               const expiresIn = /* @__PURE__ */ new Date(0);
               expiresIn.setUTCSeconds(decodedToken.exp);
               const now = (/* @__PURE__ */ new Date()).valueOf();
@@ -205906,14 +205906,14 @@ var require_createServer = __commonJS({
 // node_modules/auth0-extension-tools/src/validateHookToken.js
 var require_validateHookToken = __commonJS({
   "node_modules/auth0-extension-tools/src/validateHookToken.js"(exports2, module2) {
-    var jwt4 = require_jsonwebtoken2();
+    var jwt3 = require_jsonwebtoken2();
     var HookTokenError = require_errors8().HookTokenError;
     module2.exports = function validateHookToken(domain2, webtaskUrl, hookPath, extensionSecret, hookToken) {
       if (!hookToken) {
         throw new HookTokenError("Hook token missing");
       }
       try {
-        jwt4.verify(hookToken, extensionSecret, {
+        jwt3.verify(hookToken, extensionSecret, {
           audience: webtaskUrl + hookPath,
           issuer: "https://" + domain2
         });
@@ -206777,7 +206777,7 @@ var require_lib22 = __commonJS({
 // node_modules/auth0-extension-tools/src/sessionManager.js
 var require_sessionManager = __commonJS({
   "node_modules/auth0-extension-tools/src/sessionManager.js"(exports2, module2) {
-    var jwt4 = require_jsonwebtoken2();
+    var jwt3 = require_jsonwebtoken2();
     var Promise2 = require_bluebird();
     var jwksClient = require_lib22();
     var crypto3 = require("crypto");
@@ -206858,7 +206858,7 @@ var require_sessionManager = __commonJS({
     SessionManager.prototype.validateToken = function(client, audience, token) {
       const self2 = this;
       return new Promise2(function(resolve, reject) {
-        const decoded = jwt4.decode(token, { complete: true });
+        const decoded = jwt3.decode(token, { complete: true });
         if (decoded == null) {
           return reject(new ValidationError("Unable to decoded the token."));
         }
@@ -206867,7 +206867,7 @@ var require_sessionManager = __commonJS({
             return reject(signingKeyError);
           }
           const signingKey = key.publicKey || key.rsaPublicKey;
-          return jwt4.verify(token, signingKey, { algorithms: ["RS256"] }, function(err, payload) {
+          return jwt3.verify(token, signingKey, { algorithms: ["RS256"] }, function(err, payload) {
             if (err) {
               return reject(err);
             }
@@ -206935,7 +206935,7 @@ var require_sessionManager = __commonJS({
         if (!options2.noAccessToken) {
           payload.access_token = accessToken;
         }
-        return jwt4.sign(payload, options2.secret, {
+        return jwt3.sign(payload, options2.secret, {
           algorithm: "HS256",
           issuer: options2.issuer,
           audience: options2.audience
@@ -207879,9 +207879,9 @@ var require_jsonwebtoken5 = __commonJS({
     var JsonWebTokenError = JWT.JsonWebTokenError = require_JsonWebTokenError5();
     var NotBeforeError = module2.exports.NotBeforeError = require_NotBeforeError5();
     var TokenExpiredError = JWT.TokenExpiredError = require_TokenExpiredError5();
-    JWT.decode = function(jwt4, options2) {
+    JWT.decode = function(jwt3, options2) {
       options2 = options2 || {};
-      var decoded = jws.decode(jwt4, options2);
+      var decoded = jws.decode(jwt3, options2);
       if (!decoded) {
         return null;
       }
@@ -209550,7 +209550,7 @@ var require_lodash11 = __commonJS({
 // node_modules/express-jwt/lib/index.js
 var require_lib24 = __commonJS({
   "node_modules/express-jwt/lib/index.js"(exports2, module2) {
-    var jwt4 = require_jsonwebtoken5();
+    var jwt3 = require_jsonwebtoken5();
     var UnauthorizedError = require_UnauthorizedError2();
     var unless = require_express_unless();
     var async = require_async8();
@@ -209620,7 +209620,7 @@ var require_lib24 = __commonJS({
             return next();
           }
         }
-        var dtoken = jwt4.decode(token, { complete: true }) || {};
+        var dtoken = jwt3.decode(token, { complete: true }) || {};
         async.waterfall([
           function getSecret(callback) {
             var arity = secretCallback.length;
@@ -209631,7 +209631,7 @@ var require_lib24 = __commonJS({
             }
           },
           function verifyToken(secret, callback) {
-            jwt4.verify(token, secret, options2, function(err, decoded) {
+            jwt3.verify(token, secret, options2, function(err, decoded) {
               if (err && credentialsRequired) {
                 callback(new UnauthorizedError("invalid_token", err));
               } else {
@@ -209754,7 +209754,7 @@ var require_authenticateAdmins = __commonJS({
 var require_authenticateUsers = __commonJS({
   "node_modules/auth0-extension-express-tools/src/middlewares/authenticateUsers.js"(exports2, module2) {
     var decode4 = require_lib23();
-    var jwt4 = require_lib24();
+    var jwt3 = require_lib24();
     var jwksRsa = require_lib20();
     var tools = require_src14();
     var conditional = require_conditional();
@@ -209775,7 +209775,7 @@ var require_authenticateUsers = __commonJS({
       if (typeof options2.audience !== "string" || options2.audience.length === 0) {
         throw new tools.ArgumentError("The provided audience is invalid: " + options2.audience);
       }
-      const validateToken = jwt4({
+      const validateToken = jwt3({
         secret: jwksRsa.expressJwtSecret({
           cache: true,
           rateLimit: true,
@@ -210075,7 +210075,7 @@ var require_dashboardAdmins = __commonJS({
     var express2 = require_express5();
     var crypto3 = require("crypto");
     var cookieParser = require_cookie_parser();
-    var jwt4 = require_jsonwebtoken();
+    var jwt3 = require_jsonwebtoken();
     var tools = require_src14();
     var urlHelpers = require_urlHelpers();
     module2.exports = function(options2) {
@@ -210152,7 +210152,7 @@ var require_dashboardAdmins = __commonJS({
       router.post(urlPrefix + "/login/callback", cookieParser(), function(req, res, next) {
         var decoded;
         try {
-          decoded = jwt4.decode(req.body.id_token);
+          decoded = jwt3.decode(req.body.id_token);
         } catch (e2) {
           decoded = null;
         }
@@ -210235,7 +210235,7 @@ var require_webtask = __commonJS({
     module2.exports = {
       title: "MCP Gateway Playground",
       name: "mcp-apps-playground",
-      version: "1.0.6",
+      version: "1.1.0",
       author: "atko-scratch",
       repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
       keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -210248,19 +210248,11 @@ var require_webtask = __commonJS({
       initialUrlPath: "/",
       auth0: {
         createClient: true,
-        scopes: "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+        scopes: "read:resource_servers create:resource_servers read:forms read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
       },
       secrets: {
         SESSION_SECRET: {
           description: "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
-          required: true
-        },
-        AUTH0_FORMS_PROFILE_FORM_ID: {
-          description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
-          required: true
-        },
-        AUTH0_FORMS_PAYMENT_FORM_ID: {
-          description: "ID of the Auth0 Form used by the Update payment details tool in this tenant, for example ap_abc123.",
           required: true
         },
         PUBLIC_BASE_URL: {
@@ -235009,8 +235001,8 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports2) => {
           return this;
         }
         case "object": {
-          const cacheKey2 = schemaKeyRef;
-          this._cache.delete(cacheKey2);
+          const cacheKey3 = schemaKeyRef;
+          this._cache.delete(cacheKey3);
           let id = schemaKeyRef[this.opts.schemaId];
           if (id) {
             id = (0, resolve_1.normalizeId)(id);
@@ -241969,7 +241961,7 @@ async function processGenericAccessTokenResponse(as, client, response, additiona
     if (additionalRequiredIdTokenClaims?.length) {
       requiredClaims.push(...additionalRequiredIdTokenClaims);
     }
-    const { claims, jwt: jwt4 } = await validateJwt(json2.id_token, checkSigningAlgorithm.bind(void 0, client.id_token_signed_response_alg, as.id_token_signing_alg_values_supported, "RS256"), getClockSkew(client), getClockTolerance(client), decryptFn).then(validatePresence.bind(void 0, requiredClaims)).then(validateIssuer.bind(void 0, as)).then(validateAudience.bind(void 0, client.client_id));
+    const { claims, jwt: jwt3 } = await validateJwt(json2.id_token, checkSigningAlgorithm.bind(void 0, client.id_token_signed_response_alg, as.id_token_signing_alg_values_supported, "RS256"), getClockSkew(client), getClockTolerance(client), decryptFn).then(validatePresence.bind(void 0, requiredClaims)).then(validateIssuer.bind(void 0, as)).then(validateAudience.bind(void 0, client.client_id));
     if (Array.isArray(claims.aud) && claims.aud.length !== 1) {
       if (claims.azp === void 0) {
         throw OPE('ID Token "aud" (audience) claim includes additional untrusted audiences', JWT_CLAIM_COMPARISON, { claims, claim: "aud" });
@@ -241981,7 +241973,7 @@ async function processGenericAccessTokenResponse(as, client, response, additiona
     if (claims.auth_time !== void 0) {
       assertNumber(claims.auth_time, true, 'ID Token "auth_time" (authentication time)', INVALID_RESPONSE, { claims });
     }
-    jwtRefs.set(response, jwt4);
+    jwtRefs.set(response, jwt3);
     idTokenClaims.set(json2, claims);
   }
   if (recognizedTokenTypes?.[json2.token_type] !== void 0) {
@@ -243495,8 +243487,8 @@ var JWTClaimsBuilder = class {
 };
 
 // node_modules/jose/dist/webapi/jwt/verify.js
-async function jwtVerify(jwt4, key, options2) {
-  const verified = await verifyCompact(jwt4, prepareVerify(options2), key);
+async function jwtVerify(jwt3, key, options2) {
+  const verified = await verifyCompact(jwt3, prepareVerify(options2), key);
   if (!verified[2]) {
     throw new JWTInvalid("JWTs MUST NOT use unencoded payload");
   }
@@ -244155,10 +244147,10 @@ function decodeProtectedHeader(token) {
 }
 
 // node_modules/jose/dist/webapi/util/decode_jwt.js
-function decodeJwt(jwt4) {
-  if (typeof jwt4 !== "string")
+function decodeJwt(jwt3) {
+  if (typeof jwt3 !== "string")
     throw new JWTInvalid("JWTs must use Compact JWS serialization, JWT must be a string");
-  const { 1: payload, length } = jwt4.split(".");
+  const { 1: payload, length } = jwt3.split(".");
   if (length === 5)
     throw new JWTInvalid("Only JWTs using Compact JWS serialization can be decoded");
   if (length !== 3)
@@ -246489,11 +246481,11 @@ var DiscoveryCacheFactory = class {
    * @returns Discovery cache instance, or null-like object if caching disabled
    */
   static createDiscoveryCache(config2) {
-    const cacheKey2 = getGlobalCacheKey(config2.maxEntries, config2.ttlMs);
-    let cache2 = getGlobalCache(cacheKey2);
+    const cacheKey3 = getGlobalCacheKey(config2.maxEntries, config2.ttlMs);
+    let cache2 = getGlobalCache(cacheKey3);
     if (!cache2) {
       cache2 = new LruCache(config2.maxEntries, config2.ttlMs);
-      globalCaches.set(cacheKey2, cache2);
+      globalCaches.set(cacheKey3, cache2);
     }
     return cache2;
   }
@@ -246700,8 +246692,8 @@ var AuthClient = class {
         serverMetadata: this.#serverMetadata
       };
     }
-    const cacheKey2 = this.#getDiscoveryCacheKey();
-    const cached3 = this.#discoveryCache.get(cacheKey2);
+    const cacheKey3 = this.#getDiscoveryCacheKey();
+    const cached3 = this.#discoveryCache.get(cacheKey3);
     if (cached3) {
       this.#serverMetadata = cached3.serverMetadata;
       this.#configuration = await this.#createConfiguration(cached3.serverMetadata);
@@ -246710,7 +246702,7 @@ var AuthClient = class {
         serverMetadata: this.#serverMetadata
       };
     }
-    const inFlight = this.#inFlightDiscovery.get(cacheKey2);
+    const inFlight = this.#inFlightDiscovery.get(cacheKey3);
     if (inFlight) {
       const entry = await inFlight;
       this.#serverMetadata = entry.serverMetadata;
@@ -246732,21 +246724,21 @@ var AuthClient = class {
         }
       );
       const serverMetadata = configuration.serverMetadata();
-      this.#discoveryCache.set(cacheKey2, { serverMetadata });
+      this.#discoveryCache.set(cacheKey3, { serverMetadata });
       return { configuration, serverMetadata };
     })();
     const inFlightEntry = discoveryPromise.then(({ serverMetadata }) => ({
       serverMetadata
     }));
     void inFlightEntry.catch(() => void 0);
-    this.#inFlightDiscovery.set(cacheKey2, inFlightEntry);
+    this.#inFlightDiscovery.set(cacheKey3, inFlightEntry);
     try {
       const { configuration, serverMetadata } = await discoveryPromise;
       this.#configuration = configuration;
       this.#serverMetadata = serverMetadata;
       this.#configuration[customFetch3] = this.#customFetch;
     } finally {
-      this.#inFlightDiscovery.delete(cacheKey2);
+      this.#inFlightDiscovery.delete(cacheKey3);
     }
     return {
       configuration: this.#configuration,
@@ -249379,8 +249371,48 @@ function createExtensionApp(configReader, initialRequest, options2 = {}) {
   return app;
 }
 
-// src/mock/travel.ts
+// src/diagnostics.ts
 var import_node_crypto = require("node:crypto");
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function safeCode(error51) {
+  if (!isRecord(error51) || typeof error51.code !== "string") return void 0;
+  return /^[A-Za-z0-9_.-]{1,80}$/.test(error51.code) ? error51.code : void 0;
+}
+function tokenDiagnostics(token) {
+  const segments = token.split(".");
+  return {
+    fingerprint: (0, import_node_crypto.createHash)("sha256").update(token).digest("hex").slice(0, 12),
+    length: token.length,
+    segmentCount: segments.length,
+    compactJwtShape: segments.length === 3 && segments.every(Boolean)
+  };
+}
+function errorDiagnostics(error51) {
+  const status = isRecord(error51) && typeof error51.statusCode === "number" ? error51.statusCode : isRecord(error51) && typeof error51.status === "number" ? error51.status : void 0;
+  return {
+    errorCode: safeCode(error51),
+    errorName: error51 instanceof Error ? error51.name : typeof error51,
+    status
+  };
+}
+function mcpRequestDiagnostics(body) {
+  if (!isRecord(body)) return { mcpMethod: "unparsed" };
+  const mcpMethod = typeof body.method === "string" ? body.method.slice(0, 120) : "unknown";
+  const params = isRecord(body.params) ? body.params : void 0;
+  const toolName = mcpMethod === "tools/call" && typeof params?.name === "string" ? params.name.slice(0, 120) : void 0;
+  return { mcpMethod, toolName };
+}
+function valueFingerprint(value) {
+  return (0, import_node_crypto.createHash)("sha256").update(value).digest("hex").slice(0, 12);
+}
+function requestPath(url2) {
+  return url2.split("?", 1)[0] || "/";
+}
+
+// src/mock/travel.ts
+var import_node_crypto2 = require("node:crypto");
 var DESTINATIONS = [
   {
     id: "dest_paris",
@@ -249898,7 +249930,7 @@ var SEARCH_RESULTS = {
 function getDefaultResults(destination, origin) {
   return [
     {
-      tripId: `TR-${(0, import_node_crypto.randomUUID)().slice(0, 6).toUpperCase()}`,
+      tripId: `TR-${(0, import_node_crypto2.randomUUID)().slice(0, 6).toUpperCase()}`,
       destination,
       origin,
       airline: "British Airways",
@@ -250026,46 +250058,6 @@ var travel_default = travelRoutes;
 
 // src/plugins/auth.ts
 var import_fastify_plugin2 = __toESM(require_plugin(), 1);
-
-// src/diagnostics.ts
-var import_node_crypto2 = require("node:crypto");
-function isRecord(value) {
-  return typeof value === "object" && value !== null;
-}
-function safeCode(error51) {
-  if (!isRecord(error51) || typeof error51.code !== "string") return void 0;
-  return /^[A-Za-z0-9_.-]{1,80}$/.test(error51.code) ? error51.code : void 0;
-}
-function tokenDiagnostics(token) {
-  const segments = token.split(".");
-  return {
-    fingerprint: (0, import_node_crypto2.createHash)("sha256").update(token).digest("hex").slice(0, 12),
-    length: token.length,
-    segmentCount: segments.length,
-    compactJwtShape: segments.length === 3 && segments.every(Boolean)
-  };
-}
-function errorDiagnostics(error51) {
-  const status = isRecord(error51) && typeof error51.statusCode === "number" ? error51.statusCode : isRecord(error51) && typeof error51.status === "number" ? error51.status : void 0;
-  return {
-    errorCode: safeCode(error51),
-    errorName: error51 instanceof Error ? error51.name : typeof error51,
-    status
-  };
-}
-function mcpRequestDiagnostics(body) {
-  if (!isRecord(body)) return { mcpMethod: "unparsed" };
-  const mcpMethod = typeof body.method === "string" ? body.method.slice(0, 120) : "unknown";
-  const params = isRecord(body.params) ? body.params : void 0;
-  const toolName = mcpMethod === "tools/call" && typeof params?.name === "string" ? params.name.slice(0, 120) : void 0;
-  return { mcpMethod, toolName };
-}
-function valueFingerprint(value) {
-  return (0, import_node_crypto2.createHash)("sha256").update(value).digest("hex").slice(0, 12);
-}
-function requestPath(url2) {
-  return url2.split("?", 1)[0] || "/";
-}
 
 // src/server/context.ts
 var import_node_async_hooks2 = require("node:async_hooks");
@@ -250661,15 +250653,15 @@ function G(B, Q, F, V, q2) {
   return B.registerResource(Q, F, { mimeType: L, ...V }, q2);
 }
 
+// src/toolkits/auth0-forms/tenant-forms.ts
+var import_node_crypto3 = require("node:crypto");
+var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
+
 // src/toolkits/auth0-forms/urls.ts
 function formsSdkUrl() {
   return `https://${requireEnv("AUTH0_DOMAIN")}/forms/sdk/forms.js`;
 }
 var RESOURCE_URI = "ui://auth0-forms/mcp-app.html";
-
-// src/toolkits/auth0-forms/update-payment-details.ts
-var import_node_crypto3 = require("node:crypto");
-var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
 
 // src/server/scopes.ts
 function withRequiredAuth(requirements, handler2) {
@@ -250723,60 +250715,108 @@ function withRequiredAuth(requirements, handler2) {
   });
 }
 
-// src/toolkits/auth0-forms/update-payment-details.ts
+// src/toolkits/auth0-forms/tenant-forms.ts
 var CONTEXT_JWT_TTL = "5m";
-function registerUpdatePaymentDetails(server) {
-  j(
-    server,
-    "update_payment_details",
-    {
-      description: "Opens a secure payment details update form as a sandboxed MCP App. Sensitive fields stay inside the iframe and never transit through the LLM.",
-      inputSchema: external_exports.object({}),
-      _meta: { ui: { resourceUri: RESOURCE_URI } }
-    },
-    withRequiredAuth({ scopes: "read:account" }, async () => {
-      const user = getCallerUser();
-      const formId = requireEnv("AUTH0_FORMS_PAYMENT_FORM_ID");
-      const contextJwt = import_jsonwebtoken.default.sign(
-        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto3.randomUUID)() },
-        requireEnv("SESSION_SECRET"),
-        { expiresIn: CONTEXT_JWT_TTL }
-      );
-      return {
-        content: [{ type: "text", text: "Payment details form ready. Complete it in the panel." }],
-        structuredContent: { formId, contextJwt, successMessage: "Payment details updated." }
-      };
-    })
+var FORMS_CACHE_TTL_MS = 6e4;
+var formsCache = /* @__PURE__ */ new Map();
+var pendingFormsRequests = /* @__PURE__ */ new Map();
+function normalizeForm(value) {
+  if (typeof value !== "object" || value === null) return void 0;
+  const form = value;
+  if (typeof form.id !== "string" || !/^[A-Za-z0-9_-]{1,48}$/.test(form.id))
+    return void 0;
+  if (typeof form.name !== "string" || !form.name.trim()) return void 0;
+  return { id: form.id, name: form.name.trim().slice(0, 160) };
+}
+function formValuesFromResponse(response) {
+  return Array.isArray(response) ? response : typeof response === "object" && response !== null && Array.isArray(response.forms) ? response.forms : [];
+}
+function formsFromResponse(response) {
+  return formValuesFromResponse(response).map(normalizeForm).filter((form) => form !== void 0).sort(
+    (left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id)
   );
 }
-
-// src/toolkits/auth0-forms/update-profile.ts
-var import_node_crypto4 = require("node:crypto");
-var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
-var CONTEXT_JWT_TTL2 = "5m";
-function registerUpdateProfile(server) {
-  j(
-    server,
-    "update_profile",
-    {
-      description: "Opens a secure profile information update form as a sandboxed MCP App. Sensitive fields stay inside the iframe and never transit through the LLM.",
-      inputSchema: external_exports.object({}),
-      _meta: { ui: { resourceUri: RESOURCE_URI } }
-    },
-    withRequiredAuth({ scopes: "read:account" }, async () => {
-      const user = getCallerUser();
-      const formId = requireEnv("AUTH0_FORMS_PROFILE_FORM_ID");
-      const contextJwt = import_jsonwebtoken2.default.sign(
-        { sub: user.sub, email: user.email, name: user.name, nonce: (0, import_node_crypto4.randomUUID)() },
-        requireEnv("SESSION_SECRET"),
-        { expiresIn: CONTEXT_JWT_TTL2 }
-      );
-      return {
-        content: [{ type: "text", text: "Profile information form ready. Complete it in the panel." }],
-        structuredContent: { formId, contextJwt, successMessage: "Profile information updated." }
-      };
-    })
+function cacheKey2(config2) {
+  return config2("AUTH0_DOMAIN")?.trim().toLowerCase() ?? "";
+}
+async function fetchTenantForms(config2) {
+  const { domain: domain2, token } = await managementAccessToken(config2);
+  const forms = /* @__PURE__ */ new Map();
+  const perPage = 100;
+  for (let page = 0; page < 20; page += 1) {
+    const response = await managementApiJson(
+      domain2,
+      token,
+      `forms?page=${page}&per_page=${perPage}`
+    );
+    for (const form of formsFromResponse(response)) forms.set(form.id, form);
+    if (formValuesFromResponse(response).length < perPage) break;
+  }
+  return [...forms.values()].sort(
+    (left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id)
   );
+}
+async function listTenantForms(config2) {
+  const key = cacheKey2(config2);
+  const now = Date.now();
+  const cached3 = formsCache.get(key);
+  if (cached3 && cached3.expiresAt > now) return cached3.forms;
+  const pending = pendingFormsRequests.get(key);
+  if (pending) return pending;
+  const request = fetchTenantForms(config2).then((forms) => {
+    formsCache.set(key, {
+      expiresAt: Date.now() + FORMS_CACHE_TTL_MS,
+      forms
+    });
+    return forms;
+  }).finally(() => {
+    pendingFormsRequests.delete(key);
+  });
+  pendingFormsRequests.set(key, request);
+  return request;
+}
+function formToolName(formId) {
+  const fingerprint = (0, import_node_crypto3.createHash)("sha256").update(formId).digest("hex").slice(0, 12);
+  return `open_auth0_form_${fingerprint}`;
+}
+function registerTenantForms(server, forms) {
+  for (const form of forms) {
+    j(
+      server,
+      formToolName(form.id),
+      {
+        description: `Open the Auth0 Form \u201C${form.name}\u201D as a sandboxed MCP App. Sensitive fields stay inside the iframe and never transit through the LLM.`,
+        inputSchema: external_exports.object({}),
+        _meta: { ui: { resourceUri: RESOURCE_URI } }
+      },
+      withRequiredAuth({ scopes: "read:account" }, async () => {
+        const user = getCallerUser();
+        const contextJwt = import_jsonwebtoken.default.sign(
+          {
+            sub: user.sub,
+            email: user.email,
+            name: user.name,
+            nonce: (0, import_node_crypto3.randomUUID)()
+          },
+          requireEnv("SESSION_SECRET"),
+          { expiresIn: CONTEXT_JWT_TTL }
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: `${form.name} form ready. Complete it in the panel.`
+            }
+          ],
+          structuredContent: {
+            formId: form.id,
+            contextJwt,
+            successMessage: `${form.name} completed.`
+          }
+        };
+      })
+    );
+  }
 }
 
 // src/toolkits/auth0-forms/index.ts
@@ -250784,9 +250824,8 @@ function injectScript(html, src) {
   return html.replace("</head>", `<script src="${src}"></script></head>`);
 }
 var formsHtml = require_mcp_app();
-function registerAuth0FormsTools(server) {
-  registerUpdatePaymentDetails(server);
-  registerUpdateProfile(server);
+function registerAuth0FormsTools(server, forms) {
+  registerTenantForms(server, forms);
   G(
     server,
     "Auth0 Forms",
@@ -251100,7 +251139,7 @@ function registerRecommendationsTools(server) {
 var webtask_default = {
   title: "MCP Gateway Playground",
   name: "mcp-apps-playground",
-  version: "1.0.6",
+  version: "1.1.0",
   author: "atko-scratch",
   repository: "https://github.com/mustafadeel/mcp-apps-playground-auth0-extension",
   keywords: ["auth0", "extension", "mcp", "mcp-apps", "travel"],
@@ -251113,19 +251152,11 @@ var webtask_default = {
   initialUrlPath: "/",
   auth0: {
     createClient: true,
-    scopes: "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+    scopes: "read:resource_servers create:resource_servers read:forms read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
   },
   secrets: {
     SESSION_SECRET: {
       description: "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
-      required: true
-    },
-    AUTH0_FORMS_PROFILE_FORM_ID: {
-      description: "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
-      required: true
-    },
-    AUTH0_FORMS_PAYMENT_FORM_ID: {
-      description: "ID of the Auth0 Form used by the Update payment details tool in this tenant, for example ap_abc123.",
       required: true
     },
     PUBLIC_BASE_URL: {
@@ -251161,12 +251192,27 @@ async function buildServer(config2, configReader, initialRequest) {
   await app.register(authPlugin);
   await app.register(import_express2.default);
   app.use(createExtensionApp(configReader, initialRequest, { setupOnly: true }));
-  const mcpServer = new McpServer({ name: "mcp-server", version: "1.0.0" });
-  registerRecommendationsTools(mcpServer);
-  registerHistoryTools(mcpServer);
-  registerBookingsTools(mcpServer);
-  registerAuth0FormsTools(mcpServer);
-  const mcpHandler = createMcpHandler(() => mcpServer);
+  const mcpHandler = createMcpHandler(async ({ authInfo }) => {
+    const mcpServer = new McpServer({ name: "mcp-server", version: "1.0.0" });
+    registerRecommendationsTools(mcpServer);
+    registerHistoryTools(mcpServer);
+    registerBookingsTools(mcpServer);
+    let forms = [];
+    if (authInfo?.scopes.includes("read:account")) {
+      try {
+        forms = await listTenantForms(configReader);
+        app.log.info({ event: "forms.discovery.completed", formCount: forms.length }, "Tenant Forms discovered");
+      } catch (error51) {
+        app.log.warn(
+          { event: "forms.discovery.failed", ...errorDiagnostics(error51) },
+          "Unable to discover tenant Forms"
+        );
+        throw new Error("Unable to load Auth0 Forms for this request.");
+      }
+    }
+    registerAuth0FormsTools(mcpServer, forms);
+    return mcpServer;
+  });
   await app.register(createMcpPlugin(mcpHandler));
   await app.register(travel_default, { prefix: "/mock" });
   app.get("/health", async () => ({ status: "ok", runtime: process.version }));

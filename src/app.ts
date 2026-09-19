@@ -164,7 +164,7 @@ function managementCredentials(config: ConfigReader) {
   return { clientId, clientSecret, domain: toAuth0Domain(domain) };
 }
 
-async function managementAccessToken(config: ConfigReader): Promise<{ domain: string; token: string }> {
+export async function managementAccessToken(config: ConfigReader): Promise<{ domain: string; token: string }> {
   const credentials = managementCredentials(config);
   const response = await fetch(`https://${credentials.domain}/oauth/token`, {
     body: JSON.stringify({
@@ -186,7 +186,7 @@ async function managementAccessToken(config: ConfigReader): Promise<{ domain: st
   return { domain: credentials.domain, token: payload.access_token };
 }
 
-async function managementApiJson<T>(
+export async function managementApiJson<T>(
   domain: string,
   token: string,
   path: string,

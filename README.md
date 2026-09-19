@@ -82,6 +82,8 @@ The extension runs on Node 22 and requires these settings:
 
 `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, and `EXTENSION_SECRET` are supplied by Auth0 at runtime. Do not add, expose, or log them as settings.
 
+Auth0 Forms are discovered from the installed tenant at MCP request time. The extension's managed Management API client requests only `read:forms` for this, and a caller must hold the existing `read:account` MCP scope before Form tools are exposed. Each available Form becomes an `open_auth0_form_*` MCP App tool. Form IDs do not belong in extension settings.
+
 ### Build and publish
 
 ```bash
@@ -93,7 +95,7 @@ The build generates and validates the files required by the legacy importer: `in
 
 ### Import and provision
 
-1. In Auth0 Dashboard → Extensions, import this public repository and enter `SESSION_SECRET`.
+1. In Auth0 Dashboard → Extensions, import this public repository and enter `SESSION_SECRET`. When updating from an older release, perform a full update/reinstall so Auth0 grants the extension's new `read:forms` Management API permission.
 2. Open the installed extension and select **Sign in and provision**. Its dashboard-admin-only setup routes create or reuse the RS256 API with the exact displayed `/mcp` URL as its audience; they also create the third-party client grant and expose connection/DCR setup.
 3. Install `https://github.com/mustafadeel/auth0-ext-wellknown` in the same tenant as a separate Custom Extension with name `.well-known` and `useHashName: false`.
 4. Promote a domain-level connection if needed, then connect an OAuth-capable client to the displayed `/mcp` URL.
@@ -113,9 +115,10 @@ secrets, session secrets, Forms context JWTs, and all MCP tool arguments.
 | `mcp.authentication.*` | Missing, verified, or rejected bearer token. Failed-token events contain only a SHA-256 fingerprint prefix, length, and JWT shape. |
 | `mcp.tool.scope_denied` | The required and missing scopes. |
 | `mcp.tool.completed` / `mcp.tool.failed` | The server-side tool outcome; error logs contain structural error fields only. |
+| `forms.discovery.completed` / `forms.discovery.failed` | Tenant Form discovery count or a token-safe failure diagnostic. |
 | `mcp.response.completed` | Final HTTP response status for the MCP request. |
 
 If `mcp.tool.completed` appears for an Auth0 Forms tool but its MCP App still
 shows an error, the server has completed successfully; check the browser's
-developer console/network panel for the Forms SDK or tenant-specific form-ID
-failure.
+developer console/network panel for the Forms SDK or whether the Form remains
+available in the installed tenant.

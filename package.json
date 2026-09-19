@@ -1,6 +1,6 @@
 {
   "name": "mcp-apps-playground-auth0-extension",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Auth0 Custom Extension hosting the MCP Gateway Playground travel and Auth0 Forms tools.",
   "author": "atko-scratch",
   "keywords": [
@@ -89,19 +89,11 @@
     "initialUrlPath": "/",
     "auth0": {
       "createClient": true,
-      "scopes": "read:resource_servers create:resource_servers read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
+      "scopes": "read:resource_servers create:resource_servers read:forms read:connections update:connections read:tenant_settings update:tenant_settings create:client_grants read:client_grants"
     },
     "secrets": {
       "SESSION_SECRET": {
         "description": "At least 32 characters. Signs the short-lived context JWT used by the Auth0 Forms tools.",
-        "required": true
-      },
-      "AUTH0_FORMS_PROFILE_FORM_ID": {
-        "description": "ID of the Auth0 Form used by the Update profile tool in this tenant, for example ap_abc123.",
-        "required": true
-      },
-      "AUTH0_FORMS_PAYMENT_FORM_ID": {
-        "description": "ID of the Auth0 Form used by the Update payment details tool in this tenant, for example ap_abc123.",
         "required": true
       },
       "PUBLIC_BASE_URL": {
