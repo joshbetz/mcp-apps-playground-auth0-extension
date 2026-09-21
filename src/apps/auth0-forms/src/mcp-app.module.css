@@ -1,16 +1,19 @@
 .wrapper {
   position: relative;
   width: 100%;
-  min-height: 100%;
-  display: grid;
-  place-items: start center;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   padding: clamp(1rem, 3vw, 2.5rem);
   color-scheme: light;
   background: #f4f6fa;
 }
 
 .formContainer {
-  width: min(100%, 44rem);
+  width: 100%;
+  max-width: 44rem;
   min-width: 0;
   --form-surface: #ffffff;
   --form-text: #172033;
@@ -31,6 +34,9 @@
  */
 .formContainer :global(.af-form) {
   width: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  padding: clamp(1.25rem, 3vw, 2.25rem) !important;
   color-scheme: light;
   color: var(--form-text);
   background: var(--form-surface);
@@ -106,6 +112,7 @@
 
   .formContainer :global(.af-form) {
     border-radius: 0.875rem;
+    padding: 1rem !important;
   }
 }
 
