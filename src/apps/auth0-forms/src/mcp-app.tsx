@@ -133,7 +133,7 @@ function App() {
           <div className={styles.spinner} />
         </div>
       )}
-      <div ref={containerRef} />
+      <div className={styles.formContainer} ref={containerRef} />
     </div>
   );
 }

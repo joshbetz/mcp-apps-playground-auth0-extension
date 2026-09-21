@@ -1,7 +1,75 @@
 .wrapper {
   position: relative;
   width: 100%;
-  min-height: 200px;
+  min-height: 100%;
+  display: grid;
+  place-items: start center;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  background: var(--color-background-secondary);
+}
+
+.formContainer {
+  width: min(100%, 44rem);
+  min-width: 0;
+}
+
+/*
+ * Auth0 Forms mounts directly into this element. Keep the third-party form in
+ * its supported light palette: the MCP host can be dark while the secure
+ * external Form remains legible and visually stable.
+ */
+.formContainer :global(.af-form) {
+  width: 100%;
+  color-scheme: light;
+  color: #191919;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px rgb(15 23 42 / 14%);
+
+  --qds-color-bg-page: #fff !important;
+  --qds-color-bg-layer: #fff !important;
+  --qds-color-bg-input: #fff !important;
+  --qds-color-bg-brand-primary: #3f59e4 !important;
+  --qds-color-fg-bold: #191919 !important;
+  --qds-color-fg-default: #191919 !important;
+  --qds-color-fg-on-brand-primary: #fff !important;
+  --qds-color-fg-input-placeholder: #686868 !important;
+  --qds-color-border-input: #b7b7b7 !important;
+  --qds-color-border-focus: #3f59e4 !important;
+  --font-color: #191919 !important;
+  --label-font-color: #191919 !important;
+  --input-font-color: #191919 !important;
+  --input-background-color: #fff !important;
+  --input-border-color: #b7b7b7 !important;
+  --input-border-color-focus: #3f59e4 !important;
+  --button-background-color: #3f59e4 !important;
+  --button-font-color: #fff !important;
+  --placeholder-color: #686868 !important;
+  --primary-color: #3f59e4 !important;
+  --outline-focus-color: #3f59e4 !important;
+}
+
+.formContainer :global(.af-form) :global(input),
+.formContainer :global(.af-form) :global(select),
+.formContainer :global(.af-form) :global(textarea) {
+  color: #191919;
+  background-color: #fff;
+}
+
+.formContainer :global(.af-form) :global(input)::placeholder,
+.formContainer :global(.af-form) :global(textarea)::placeholder {
+  color: #686868;
+  opacity: 1;
+}
+
+@media (max-width: 40rem) {
+  .wrapper {
+    padding: var(--spacing-md);
+  }
+
+  .formContainer :global(.af-form) {
+    border-radius: 0.875rem;
+  }
 }
 
 .spinnerWrap {
