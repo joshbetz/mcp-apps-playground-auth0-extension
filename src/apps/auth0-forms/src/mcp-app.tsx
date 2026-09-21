@@ -84,7 +84,10 @@ function App() {
     async function embed(): Promise<void> {
       try {
         await window.Auth0Forms!.embed(data.formId, container, {
-          fields: { context_token: data.contextJwt },
+          // The MCP server derives prefill fields from the Form definition and
+          // never includes sensitive fields. Keep the context token last so it
+          // cannot be overridden by a Form field value.
+          fields: { ...data.prefill, context_token: data.contextJwt },
         });
       } catch {
         if (cancelled || embeddedFormKeyRef.current !== embedKey) return;

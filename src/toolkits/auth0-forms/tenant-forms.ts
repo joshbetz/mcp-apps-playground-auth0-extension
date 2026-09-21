@@ -20,6 +20,14 @@ const FORMS_CACHE_TTL_MS = 60_000;
 export type TenantForm = {
   id: string;
   name: string;
+  injectableFields: TenantFormField[];
+};
+
+export type TenantFormField = {
+  id: string;
+  label: string;
+  required: boolean;
+  type: string;
 };
 
 type CachedForms = {
@@ -29,6 +37,53 @@ type CachedForms = {
 
 const formsCache = new Map<string, CachedForms>();
 const pendingFormsRequests = new Map<string, Promise<TenantForm[]>>();
+const RESERVED_EMBED_FIELD_IDS = new Set(["context_token", "__proto__", "constructor", "prototype"]);
+
+function isSafeFieldId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[A-Za-z0-9_-]{1,128}$/.test(value) &&
+    !RESERVED_EMBED_FIELD_IDS.has(value)
+  );
+}
+
+function injectableFieldsFromForm(value: unknown): TenantFormField[] {
+  if (typeof value !== "object" || value === null) return [];
+  const nodes = (value as { nodes?: unknown }).nodes;
+  if (!Array.isArray(nodes)) return [];
+
+  const fields = new Map<string, TenantFormField>();
+  for (const node of nodes) {
+    if (typeof node !== "object" || node === null) continue;
+    const components = (node as { config?: { components?: unknown } }).config?.components;
+    if (!Array.isArray(components)) continue;
+
+    for (const component of components) {
+      if (typeof component !== "object" || component === null) continue;
+      const field = component as {
+        category?: unknown;
+        id?: unknown;
+        label?: unknown;
+        required?: unknown;
+        sensitive?: unknown;
+        type?: unknown;
+      };
+      if (field.category !== "FIELD" || field.sensitive === true || !isSafeFieldId(field.id)) continue;
+      if (typeof field.type !== "string" || !field.type) continue;
+
+      fields.set(field.id, {
+        id: field.id,
+        label: typeof field.label === "string" && field.label.trim()
+          ? field.label.trim().slice(0, 160)
+          : field.id,
+        required: field.required === true,
+        type: field.type.slice(0, 64),
+      });
+    }
+  }
+
+  return [...fields.values()];
+}
 
 function normalizeForm(value: unknown): TenantForm | undefined {
   if (typeof value !== "object" || value === null) return undefined;
@@ -36,7 +91,11 @@ function normalizeForm(value: unknown): TenantForm | undefined {
   if (typeof form.id !== "string" || !/^[A-Za-z0-9_-]{1,48}$/.test(form.id))
     return undefined;
   if (typeof form.name !== "string" || !form.name.trim()) return undefined;
-  return { id: form.id, name: form.name.trim().slice(0, 160) };
+  return {
+    id: form.id,
+    name: form.name.trim().slice(0, 160),
+    injectableFields: injectableFieldsFromForm(value),
+  };
 }
 
 function formValuesFromResponse(response: unknown): unknown[] {
@@ -78,9 +137,28 @@ async function fetchTenantForms(config: ConfigReader): Promise<TenantForm[]> {
     if (formValuesFromResponse(response).length < perPage) break;
   }
 
-  return [...forms.values()].sort(
+  const tenantForms = [...forms.values()].sort(
     (left, right) =>
       left.name.localeCompare(right.name) || left.id.localeCompare(right.id),
+  );
+
+  // The list endpoint returns a compact Form summary. Fetch each definition so
+  // tool inputs always reflect the Form's current non-sensitive fields.
+  return Promise.all(
+    tenantForms.map(async (form) => {
+      try {
+        const definition = await managementApiJson<unknown>(
+          domain,
+          token,
+          `forms/${encodeURIComponent(form.id)}`,
+        );
+        return { ...form, injectableFields: injectableFieldsFromForm(definition) };
+      } catch {
+        // A Form remains usable even if its details are temporarily unavailable;
+        // it simply exposes no agent-prefill inputs for this discovery cycle.
+        return form;
+      }
+    }),
   );
 }
 
@@ -160,15 +238,32 @@ export function registerTenantForms(
   const toolNames = formToolNames(forms);
 
   for (const form of forms) {
+    const inputSchema = z.object(
+      Object.fromEntries(
+        form.injectableFields.map((field) => [
+          field.id,
+          z
+            .string()
+            .min(1)
+            .max(512)
+            .optional()
+            .describe(
+              `${field.label}${field.required ? " (required in the Form)" : ""}. ` +
+                "If known from context, pre-fill this field; otherwise omit it so the Form can collect it from the user.",
+            ),
+        ]),
+      ),
+    );
+
     registerAppTool(
       server,
       toolNames.get(form.id)!,
       {
-        description: `Open the Auth0 Form “${form.name}” as a sandboxed MCP App. Sensitive fields stay inside the iframe and never transit through the LLM.`,
-        inputSchema: z.object({}),
+        description: `Open the Auth0 Form “${form.name}” as a sandboxed MCP App. Non-sensitive Form fields can be pre-filled from agent context; sensitive fields stay inside the iframe and never transit through the LLM.`,
+        inputSchema,
         _meta: { ui: { resourceUri: RESOURCE_URI } },
       },
-      withRequiredAuth({ scopes: "read:account" }, async () => {
+      withRequiredAuth({ scopes: "read:account" }, async (input: Record<string, unknown>) => {
         const user = getCallerUser();
         const contextJwt = jwt.sign(
           {
@@ -180,6 +275,12 @@ export function registerTenantForms(
           requireEnv("SESSION_SECRET"),
           { expiresIn: CONTEXT_JWT_TTL },
         );
+        const prefill = Object.fromEntries(
+          form.injectableFields.flatMap((field) => {
+            const value = input[field.id];
+            return typeof value === "string" ? [[field.id, value] as const] : [];
+          }),
+        );
         return {
           content: [
             {
@@ -190,6 +291,7 @@ export function registerTenantForms(
           structuredContent: {
             formId: form.id,
             contextJwt,
+            prefill,
             successMessage: `${form.name} completed.`,
           },
         };
