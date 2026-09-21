@@ -58,6 +58,12 @@ try {
   if (landing.status !== 200 || !landing.body.includes("Sign in and provision")) {
     throw new Error(`Unexpected landing response: ${landing.status}`);
   }
+  if (
+    !landing.body.includes("https://github.com/mustafadeel/auth0-ext-wellknown") ||
+    !landing.body.includes("read:destinations read:bookings bookings:write read:account")
+  ) {
+    throw new Error("Bootstrap page does not include the OAuth discovery extension configuration.");
+  }
   if (meta.status !== 200 || JSON.parse(meta.body).name !== "mcp-apps-playground") {
     throw new Error(`Unexpected meta response: ${meta.status} ${meta.body}`);
   }

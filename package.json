@@ -1,6 +1,6 @@
 {
   "name": "mcp-apps-playground-auth0-extension",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Auth0 Custom Extension hosting the MCP Gateway Playground travel and Auth0 Forms tools.",
   "author": "atko-scratch",
   "keywords": [

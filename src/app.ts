@@ -8,6 +8,8 @@ const protectedResourceMetadataPath = "/.well-known/oauth-protected-resource";
 const setupAdminPath = "/.extensions/setup";
 const setupAudience = "urn:mcp-apps-playground-setup";
 const setupSessionStorageKey = "mcp-apps-playground:setup-token";
+const wellKnownExtensionRepository = "https://github.com/mustafadeel/auth0-ext-wellknown";
+const mcpScopes = "read:destinations read:bookings bookings:write read:account";
 
 interface WebtaskRequest extends Request {
   x_wt?: {
@@ -452,6 +454,9 @@ const pageStyles = `
   .status { color: #635e6f; font-size: 0.9em; }
   .status.error { color: #b3261e; }
   .code-block { display: block; background: #1a1523; color: #f6f5f4; padding: 0.9rem 1rem; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .copy-row { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0.5rem 0 0.75rem; }
+  .copy-row code { display: block; flex: 1 1 auto; min-width: 0; }
+  .copy-row .button { flex: 0 0 auto; white-space: nowrap; }
   .steps { padding-left: 1.25rem; }
   .steps li { margin-bottom: 0.5rem; }
   #connection-list { list-style: none; padding-left: 0; }
@@ -478,9 +483,22 @@ function renderSetupSection(options: { endpoint: string; setupBaseUrl: string })
     </section>
     <section class="card" id="next-steps-card" hidden>
       <h2>2. Install the OAuth discovery extension</h2>
-      <p class="lede">MCP clients discover this endpoint's authorization server through a separate <code>.well-known</code> Custom Extension. It must be installed once per tenant and needs no configuration &mdash; it derives everything it needs from the request itself.</p>
+      <p class="lede">MCP clients discover this endpoint's authorization server through a separate <code>.well-known</code> Custom Extension. Install it once in this tenant, then configure it with this MCP API's scopes.</p>
       <ol class="steps">
-        <li>In this tenant's Dashboard, go to <strong>Extensions</strong> and install <a href="https://github.com/mustafadeel/auth0-ext-wellknown" target="_blank" rel="noopener">auth0-ext-wellknown</a> (keep its name <code>.well-known</code>).</li>
+        <li>
+          In this tenant's Dashboard, go to <strong>Extensions</strong> and install the companion repository below. Keep its extension name as <code>.well-known</code>.
+          <div class="copy-row">
+            <code id="well-known-repository">${wellKnownExtensionRepository}</code>
+            <button class="button" type="button" data-copy-target="well-known-repository">Copy URL</button>
+          </div>
+        </li>
+        <li>
+          Configure the companion extension with the scopes this MCP API requires:
+          <div class="copy-row">
+            <code id="mcp-scopes">${mcpScopes}</code>
+            <button class="button" type="button" data-copy-target="mcp-scopes">Copy scopes</button>
+          </div>
+        </li>
       </ol>
     </section>
     <section class="card" id="connection-card" hidden>
@@ -518,6 +536,47 @@ function renderSetupSection(options: { endpoint: string; setupBaseUrl: string })
       const setup = ${config};
       const statusEl = document.getElementById("setup-status");
       const token = sessionStorage.getItem(setup.storageKey);
+
+      function copyWithSelection(text) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        return copied ? Promise.resolve() : Promise.reject(new Error("Copy is unavailable."));
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text).catch(() => copyWithSelection(text));
+        }
+        return copyWithSelection(text);
+      }
+
+      document.querySelectorAll("[data-copy-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const source = document.getElementById(button.dataset.copyTarget);
+          if (!source) return;
+          const originalLabel = button.textContent;
+          button.disabled = true;
+          copyText(source.textContent || "")
+            .then(() => {
+              button.textContent = "Copied";
+            })
+            .catch(() => {
+              button.textContent = "Copy failed";
+            })
+            .finally(() => {
+              window.setTimeout(() => {
+                button.textContent = originalLabel;
+                button.disabled = false;
+              }, 1600);
+            });
+        });
+      });
 
       function renderConnections(connections) {
         const list = document.getElementById("connection-list");
