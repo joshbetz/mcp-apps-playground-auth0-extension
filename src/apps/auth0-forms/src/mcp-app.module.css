@@ -5,12 +5,23 @@
   display: grid;
   place-items: start center;
   padding: clamp(1rem, 3vw, 2.5rem);
-  background: var(--color-background-secondary);
+  color-scheme: light;
+  background: #f4f6fa;
 }
 
 .formContainer {
   width: min(100%, 44rem);
   min-width: 0;
+  --form-surface: #ffffff;
+  --form-text: #172033;
+  --form-muted-text: #526178;
+  --form-control-surface: #ffffff;
+  --form-control-border: #aeb9ca;
+  --form-focus: #3f59e4;
+  --form-action: #3f59e4;
+  --form-action-text: #ffffff;
+  --form-panel-border: #d5ddea;
+  --form-panel-shadow: 0 2px 5px rgb(15 23 42 / 8%), 0 20px 48px rgb(15 23 42 / 16%);
 }
 
 /*
@@ -21,45 +32,71 @@
 .formContainer :global(.af-form) {
   width: 100%;
   color-scheme: light;
-  color: #191919;
-  background: #fff;
+  color: var(--form-text);
+  background: var(--form-surface);
+  border: 1px solid var(--form-panel-border);
   border-radius: 1rem;
-  box-shadow: 0 18px 40px rgb(15 23 42 / 14%);
+  box-shadow: var(--form-panel-shadow);
 
-  --qds-color-bg-page: #fff !important;
-  --qds-color-bg-layer: #fff !important;
-  --qds-color-bg-input: #fff !important;
-  --qds-color-bg-brand-primary: #3f59e4 !important;
-  --qds-color-fg-bold: #191919 !important;
-  --qds-color-fg-default: #191919 !important;
-  --qds-color-fg-on-brand-primary: #fff !important;
-  --qds-color-fg-input-placeholder: #686868 !important;
-  --qds-color-border-input: #b7b7b7 !important;
-  --qds-color-border-focus: #3f59e4 !important;
-  --font-color: #191919 !important;
-  --label-font-color: #191919 !important;
-  --input-font-color: #191919 !important;
-  --input-background-color: #fff !important;
-  --input-border-color: #b7b7b7 !important;
-  --input-border-color-focus: #3f59e4 !important;
-  --button-background-color: #3f59e4 !important;
-  --button-font-color: #fff !important;
-  --placeholder-color: #686868 !important;
-  --primary-color: #3f59e4 !important;
-  --outline-focus-color: #3f59e4 !important;
+  --qds-color-bg-page: var(--form-surface) !important;
+  --qds-color-bg-layer: var(--form-surface) !important;
+  --qds-color-bg-input: var(--form-control-surface) !important;
+  --qds-color-bg-brand-primary: var(--form-action) !important;
+  --qds-color-fg-bold: var(--form-text) !important;
+  --qds-color-fg-default: var(--form-text) !important;
+  --qds-color-fg-on-brand-primary: var(--form-action-text) !important;
+  --qds-color-fg-input-placeholder: var(--form-muted-text) !important;
+  --qds-color-border-input: var(--form-control-border) !important;
+  --qds-color-border-focus: var(--form-focus) !important;
+  --font-color: var(--form-text) !important;
+  --label-font-color: var(--form-text) !important;
+  --input-font-color: var(--form-text) !important;
+  --input-background-color: var(--form-control-surface) !important;
+  --input-border-color: var(--form-control-border) !important;
+  --input-border-color-focus: var(--form-focus) !important;
+  --button-background-color: var(--form-action) !important;
+  --button-font-color: var(--form-action-text) !important;
+  --placeholder-color: var(--form-muted-text) !important;
+  --primary-color: var(--form-action) !important;
+  --outline-focus-color: var(--form-focus) !important;
 }
 
 .formContainer :global(.af-form) :global(input),
 .formContainer :global(.af-form) :global(select),
 .formContainer :global(.af-form) :global(textarea) {
-  color: #191919;
-  background-color: #fff;
+  color: var(--form-text);
+  background-color: var(--form-control-surface);
 }
 
 .formContainer :global(.af-form) :global(input)::placeholder,
 .formContainer :global(.af-form) :global(textarea)::placeholder {
-  color: #686868;
+  color: var(--form-muted-text);
   opacity: 1;
+}
+
+/* The Form follows the viewer's operating-system preference, not the MCP host. */
+@media (prefers-color-scheme: dark) {
+  .wrapper {
+    color-scheme: dark;
+    background: #161a22;
+  }
+
+  .formContainer {
+    --form-surface: #202835;
+    --form-text: #f4f7ff;
+    --form-muted-text: #b8c3d6;
+    --form-control-surface: #171e29;
+    --form-control-border: #536178;
+    --form-focus: #a9b8ff;
+    --form-action: #536bd9;
+    --form-action-text: #ffffff;
+    --form-panel-border: #3b485d;
+    --form-panel-shadow: 0 2px 6px rgb(0 0 0 / 28%), 0 22px 52px rgb(0 0 0 / 34%);
+  }
+
+  .formContainer :global(.af-form) {
+    color-scheme: dark;
+  }
 }
 
 @media (max-width: 40rem) {
