@@ -85,9 +85,10 @@ function App() {
       try {
         await window.Auth0Forms!.embed(data.formId, container, {
           // The MCP server derives prefill fields from the Form definition and
-          // never includes sensitive fields. Keep the context token last so it
-          // cannot be overridden by a Form field value.
-          fields: { ...data.prefill, context_token: data.contextJwt },
+          // never includes sensitive fields. Trusted fields come from the
+          // verified caller token, so apply them after agent prefill. Keep the
+          // context token last so neither source can override it.
+          fields: { ...data.prefill, ...data.trustedFields, context_token: data.contextJwt },
         });
       } catch {
         if (cancelled || embeddedFormKeyRef.current !== embedKey) return;

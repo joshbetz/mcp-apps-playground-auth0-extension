@@ -21,6 +21,7 @@ export type TenantForm = {
   id: string;
   name: string;
   injectableFields: TenantFormField[];
+  callerSubjectFieldIds: string[];
 };
 
 export type TenantFormField = {
@@ -38,6 +39,7 @@ type CachedForms = {
 const formsCache = new Map<string, CachedForms>();
 const pendingFormsRequests = new Map<string, Promise<TenantForm[]>>();
 const RESERVED_EMBED_FIELD_IDS = new Set(["context_token", "__proto__", "constructor", "prototype"]);
+const CALLER_SUBJECT_FIELD_ID = "user_id";
 
 function isSafeFieldId(value: unknown): value is string {
   return (
@@ -85,6 +87,23 @@ function injectableFieldsFromForm(value: unknown): TenantFormField[] {
   return [...fields.values()];
 }
 
+function callerSubjectFieldsFromForm(value: unknown): string[] {
+  if (typeof value !== "object" || value === null) return [];
+  const hiddenFields = (value as { start?: { hidden_fields?: unknown } }).start?.hidden_fields;
+  if (!Array.isArray(hiddenFields)) return [];
+
+  // A Form opts in by declaring its own hidden `user_id` field. This maps to
+  // the verified caller subject and is deliberately separate from agent input.
+  return hiddenFields.some(
+    (field) =>
+      typeof field === "object" &&
+      field !== null &&
+      (field as { key?: unknown }).key === CALLER_SUBJECT_FIELD_ID,
+  )
+    ? [CALLER_SUBJECT_FIELD_ID]
+    : [];
+}
+
 function normalizeForm(value: unknown): TenantForm | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const form = value as { id?: unknown; name?: unknown };
@@ -95,6 +114,7 @@ function normalizeForm(value: unknown): TenantForm | undefined {
     id: form.id,
     name: form.name.trim().slice(0, 160),
     injectableFields: injectableFieldsFromForm(value),
+    callerSubjectFieldIds: callerSubjectFieldsFromForm(value),
   };
 }
 
@@ -152,7 +172,11 @@ async function fetchTenantForms(config: ConfigReader): Promise<TenantForm[]> {
           token,
           `forms/${encodeURIComponent(form.id)}`,
         );
-        return { ...form, injectableFields: injectableFieldsFromForm(definition) };
+        return {
+          ...form,
+          injectableFields: injectableFieldsFromForm(definition),
+          callerSubjectFieldIds: callerSubjectFieldsFromForm(definition),
+        };
       } catch {
         // A Form remains usable even if its details are temporarily unavailable;
         // it simply exposes no agent-prefill inputs for this discovery cycle.
@@ -281,6 +305,9 @@ export function registerTenantForms(
             return typeof value === "string" ? [[field.id, value] as const] : [];
           }),
         );
+        const trustedFields = Object.fromEntries(
+          form.callerSubjectFieldIds.map((fieldId) => [fieldId, user.sub]),
+        );
         return {
           content: [
             {
@@ -292,6 +319,7 @@ export function registerTenantForms(
             formId: form.id,
             contextJwt,
             prefill,
+            trustedFields,
             successMessage: `${form.name} completed.`,
           },
         };
