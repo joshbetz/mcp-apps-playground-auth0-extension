@@ -315,9 +315,9 @@ export function registerTenantForms(
               text: `${form.name} form ready. Complete it in the panel.`,
             },
           ],
+          _meta: { contextJwt },
           structuredContent: {
             formId: form.id,
-            contextJwt,
             prefill,
             trustedFields,
             successMessage: `${form.name} completed.`,

@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs.tsx';
 import { Spinner, SpinnerPage } from '../../components/ui/spinner.tsx';
 import type { Invoice, TripBooking } from '../../../toolkits/history/types.ts';
+import { parseBookings } from './state.ts';
 import '../../global.css';
 
 type View = { type: 'list' } | { type: 'detail'; bookingId: string };
@@ -217,12 +218,21 @@ function App() {
       };
 
       a.ontoolresult = (params: McpUiToolResultNotification['params']) => {
-        const data = params.structuredContent as { bookings: TripBooking[] } | undefined;
-        if (!data?.bookings) {
-          setLoadError('No booking data received.');
+        if (params.isError) {
+          setBookings(null);
+          setLoadError('Travel history could not be loaded.');
           return;
         }
-        setBookings(data.bookings);
+
+        const data = params.structuredContent as { bookings?: unknown } | undefined;
+        const nextBookings = parseBookings(data?.bookings);
+        if (!nextBookings) {
+          setBookings(null);
+          setLoadError('No valid booking data received.');
+          return;
+        }
+        setLoadError(null);
+        setBookings(nextBookings);
       };
     },
   });
@@ -260,16 +270,16 @@ function App() {
     );
   }
 
-  if (!isConnected || bookings === null) {
-    return <SpinnerPage />;
-  }
-
   if (loadError) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <p className="text-sm text-destructive">{loadError}</p>
+        <p className="text-sm text-destructive" role="alert">{loadError}</p>
       </div>
     );
+  }
+
+  if (!isConnected || bookings === null) {
+    return <SpinnerPage />;
   }
 
   if (view.type === 'detail') {

@@ -25,8 +25,10 @@ declare global {
 const SDK_INIT_EVENT = 'af-init';
 const FORM_SUCCESS_EVENT = 'af-submitForm-success';
 
+type FormsRuntimeData = FormsToolOutput & { contextJwt: string };
+
 function App() {
-  const [formData, setFormData] = useState<FormsToolOutput | null>(null);
+  const [formData, setFormData] = useState<FormsRuntimeData | null>(null);
   const [sdkReady, setSdkReady] = useState(() => !!window.Auth0Forms);
   const [embedError, setEmbedError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,15 @@ function App() {
       };
 
       app.ontoolresult = (params: McpUiToolResultNotification['params']) => {
-        setFormData(params.structuredContent as FormsToolOutput);
+        const data = params.structuredContent as FormsToolOutput | undefined;
+        const resultMeta = (params as typeof params & { _meta?: { contextJwt?: unknown } })._meta;
+        const contextJwt = resultMeta?.contextJwt;
+        if (!data || typeof contextJwt !== 'string') {
+          setFormData(null);
+          setEmbedError(true);
+          return;
+        }
+        setFormData({ ...data, contextJwt });
       };
     },
   });

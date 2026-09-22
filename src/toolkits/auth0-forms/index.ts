@@ -13,31 +13,27 @@ const formsHtml = require('../../apps/dist/auth0-forms/mcp-app.html') as string;
 export function registerAuth0FormsTools(server: McpServer, forms: TenantForm[]): void {
   registerTenantForms(server, forms);
 
-  registerAppResource(
-    server,
-    'Auth0 Forms',
-    RESOURCE_URI,
-    {
-      _meta: {
-        ui: {
-          // Non-empty domain opts into Inspector's dedicated-origin path,
-          // which sandboxes the iframe with allow-same-origin — required for
-          // third-party SDKs like Stripe that spawn cross-origin iframes.
-          domain: 'localhost',
-          csp: {
-            resourceDomains: ['*', 'data:', 'blob:'],
-            connectDomains: ['*'],
-            frameDomains: ['*'],
+  registerAppResource(server, 'Auth0 Forms', RESOURCE_URI, {}, async () => {
+    const sdkUrl = formsSdkUrl();
+    const sdkOrigin = new URL(sdkUrl).origin;
+    const html = injectScript(formsHtml, sdkUrl);
+    return {
+      contents: [
+        {
+          uri: RESOURCE_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: html,
+          _meta: {
+            ui: {
+              csp: {
+                resourceDomains: [sdkOrigin],
+                connectDomains: [sdkOrigin],
+                frameDomains: [sdkOrigin],
+              },
+            },
           },
         },
-      },
-    },
-    async () => {
-      const html = injectScript(
-        formsHtml,
-        formsSdkUrl(),
-      );
-      return { contents: [{ uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }] };
-    },
-  );
+      ],
+    };
+  });
 }
