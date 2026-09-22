@@ -1,8 +1,11 @@
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import { isDeepStrictEqual } from "node:util";
 
 const require = createRequire(import.meta.url);
 const handler = require("../dist/extension.js");
+const webtaskManifest = JSON.parse(readFileSync(new URL("../webtask.json", import.meta.url), "utf8"));
 if (typeof handler !== "function") {
   throw new Error(`Webtask requires the bundle to export a bare function, got ${typeof handler}`);
 }
@@ -64,7 +67,7 @@ try {
   ) {
     throw new Error("Bootstrap page does not include the OAuth discovery extension configuration.");
   }
-  if (meta.status !== 200 || JSON.parse(meta.body).name !== "mcp-apps-playground") {
+  if (meta.status !== 200 || !isDeepStrictEqual(JSON.parse(meta.body), webtaskManifest)) {
     throw new Error(`Unexpected meta response: ${meta.status} ${meta.body}`);
   }
   const expectedSetupCallback = encodeURIComponent(`https://127.0.0.1:${port}/mcp-apps-playground/.extensions/setup/login/callback`);
