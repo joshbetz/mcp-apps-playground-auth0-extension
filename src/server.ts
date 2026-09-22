@@ -91,6 +91,7 @@ export async function buildServer(
   // Match the Custom Extension template: make the import manifest publicly
   // available at /meta for Auth0's legacy extension loader.
   app.get('/meta', async (_request, reply) => reply.code(200).send(webtaskManifest));
+  app.get('/:name/meta', async (_request, reply) => reply.code(200).send(webtaskManifest));
   app.get('/', async (request, reply) => {
     reply.type('text/html').send(renderExtensionPage(configReader, request.raw as never, true));
   });
