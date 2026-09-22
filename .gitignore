@@ -3,3 +3,9 @@ node_modules/
 *.log
 .DS_Store
 .claude/
+
+# Local-only Travel0 MCP UI investigation assets.
+docs/mcp-ui-debug-report.md
+scripts/diagnose-mcp-ui.mjs
+scripts/diagnose-mcp-ui.test.mjs
+src/apps/travel-history/src/state.test.ts

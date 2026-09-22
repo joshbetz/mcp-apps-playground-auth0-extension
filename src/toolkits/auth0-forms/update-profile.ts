@@ -31,7 +31,8 @@ export function registerUpdateProfile(server: McpServer): void {
       );
       return {
         content: [{ type: 'text' as const, text: 'Profile information form ready. Complete it in the panel.' }],
-        structuredContent: { formId, contextJwt, successMessage: 'Profile information updated.' },
+        _meta: { contextJwt },
+        structuredContent: { formId, successMessage: 'Profile information updated.' },
       };
     }),
   );
