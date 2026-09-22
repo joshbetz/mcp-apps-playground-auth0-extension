@@ -31,7 +31,8 @@ export function registerUpdatePaymentDetails(server: McpServer): void {
       );
       return {
         content: [{ type: 'text' as const, text: 'Payment details form ready. Complete it in the panel.' }],
-        structuredContent: { formId, contextJwt, successMessage: 'Payment details updated.' },
+        _meta: { contextJwt },
+        structuredContent: { formId, successMessage: 'Payment details updated.' },
       };
     }),
   );
